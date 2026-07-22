@@ -21,9 +21,6 @@ from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Gio
 
-import os
-import sys
-
 from setzer.app.service_locator import ServiceLocator
 from setzer.popovers.popover_manager import PopoverManager
 from setzer.popovers.shortcutsbar.document_menu import DocumentMenu
@@ -73,7 +70,7 @@ class Shortcutsbar(Gtk.Box):
         self.right_box.set_spacing(6)
         self.right_box.set_can_focus(False)
 
-        # 中间弹簧：把 right + overflow 推到右边
+        # 中间弹簧：把 right_box 推到最右端（overflow 在 spacer 左侧，紧跟 left_box）
         self._spacer = Gtk.Box()
         self._spacer.set_hexpand(True)
 
@@ -222,8 +219,6 @@ class Shortcutsbar(Gtk.Box):
             target = min(target, n_left)
 
         target = max(0, target)
-        if os.environ.get('SETZER_DEBUG_OVERFLOW'):
-            print(f"[reflow_for_width] avail_width={available_width} left_total={left_total} fixed={fixed} avail={avail} target={target} cur={self._overflow_count}", file=sys.stderr)
         if target != self._overflow_count:
             self.set_overflow_count(target)
 
@@ -233,8 +228,6 @@ class Shortcutsbar(Gtk.Box):
         '''Move the rightmost n left buttons into the overflow popover.
         0 = show all inline. Idempotent.'''
         n = max(0, min(n, len(self.left_buttons)))
-        if os.environ.get('SETZER_DEBUG_OVERFLOW'):
-            print(f"[set_overflow_count] n={n} cur={self._overflow_count}", file=sys.stderr)
         if n == self._overflow_count:
             return
         # 先把当前在 overflow listbox 里的所有 button 还原到 left_box

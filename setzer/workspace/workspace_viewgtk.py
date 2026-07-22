@@ -185,11 +185,8 @@ class MainWindow(Adw.ApplicationWindow):
         self._last_sb_width = -1
         self._reflow_source = None
         self._pending_width = None
-        _dbg = os.environ.get('SETZER_DEBUG_OVERFLOW')
         def _poll_sb_width():
             width = self.shortcutsbar.get_allocated_width()
-            if _dbg:
-                print(f"[poll] sb_width={width} last={self._last_sb_width}", file=sys.stderr)
             if width > 1 and width != self._last_sb_width:
                 self._pending_width = width
                 # 延迟 50ms 再 reflow，让 GTK 完成布局重算
@@ -204,8 +201,6 @@ class MainWindow(Adw.ApplicationWindow):
             self._pending_width = None
             if width != self._last_sb_width:
                 self._last_sb_width = width
-                if _dbg:
-                    print(f"[reflow] -> reflow_for_width({width})", file=sys.stderr)
                 self.shortcutsbar.reflow_for_width(width)
             return False
         GLib.timeout_add(200, _poll_sb_width)
