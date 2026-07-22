@@ -13,42 +13,23 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+# along with this program. If not, see <http://www.gnu.org/licenses/>
 
 
 import gi
 gi.require_version('Gtk', '4.0')
-gi.require_version('Adw', '1')
-from gi.repository import Gtk, Adw, Gio
+from gi.repository import Gio
 
 
 class NewDocumentView(object):
+    '''Produces a Gio.Menu model consumed by Gtk.MenuButton.set_menu_model().
+
+    This is the standard libadwaita approach — identical to the hamburger menu.
+    The native Gtk.PopoverMenu handles styling, keyboard navigation, and
+    automatic popdown on action activation.
+    '''
 
     def __init__(self):
-        self.popover = Gtk.Popover()
-        self.popover.set_size_request(252, -1)
-
-        self.list_box = Gtk.ListBox()
-        self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.list_box.add_css_class('menu')
-
-        self.popover.set_child(self.list_box)
-
-        self.button_latex = self.create_row(_('New LaTeX Document'), 'win.new-latex-document')
-        self.button_bibtex = self.create_row(_('New BibTeX Document'), 'win.new-bibtex-document')
-
-        self.list_box.append(self.button_latex)
-        self.list_box.append(self.button_bibtex)
-
-        self.list_box.connect('row-activated', self.on_row_activated)
-
-    def create_row(self, title, action_name):
-        row = Adw.ActionRow()
-        row.set_title(title)
-        row.set_activatable(True)
-        row.set_action_name(action_name)
-        return row
-
-    def on_row_activated(self, list_box, row):
-        self.popover.popdown()
+        self.model = Gio.Menu()
+        self.model.append(_('New LaTeX Document'), 'win.new-latex-document')
+        self.model.append(_('New BibTeX Document'), 'win.new-bibtex-document')

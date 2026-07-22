@@ -49,6 +49,7 @@ class Settings(Observable):
         self.defaults['window_state']['show_symbols'] = False
         self.defaults['window_state']['show_document_structure'] = False
         self.defaults['window_state']['sidebar_paned_position'] = -1
+        self.defaults['window_state']['sidebar_width_fraction'] = 0.21
         self.defaults['window_state']['show_help'] = False
         self.defaults['window_state']['show_preview'] = False
         self.defaults['window_state']['show_build_log'] = False
@@ -75,6 +76,8 @@ class Settings(Observable):
         self.defaults['preferences']['auto_build'] = False
         self.defaults['preferences']['auto_build_delay'] = 2
         self.defaults['preferences']['color_scheme'] = 'default'
+        self.defaults['preferences']['app_theme_mode'] = 'system'
+        self.defaults['preferences']['language'] = 'en'
         self.defaults['preferences']['recolor_pdf'] = False
         self.defaults['preferences']['spaces_instead_of_tabs'] = True
         self.defaults['preferences']['tab_width'] = 4

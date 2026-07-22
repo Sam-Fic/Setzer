@@ -30,11 +30,11 @@ class DocumentWizardView(DialogView):
         DialogView.__init__(self, main_window)
 
         self.set_content_width(750)
-        self.set_content_height(500)
-        self.headerbar.set_title_widget(Gtk.Label(label=_('Add / Remove Packages')))
+        self.set_content_height(600)
+        self.headerbar.set_title_widget(Gtk.Label(label=_('Create a template document')))
         self.headerbar.set_show_start_title_buttons(False)
         self.headerbar.set_show_end_title_buttons(False)
-        self.topbox.set_size_request(750, 450)
+        self.topbox.set_size_request(750, 560)
 
         self.center_box = Gtk.CenterBox()
         self.center_box.set_orientation(Gtk.Orientation.HORIZONTAL)
@@ -73,10 +73,8 @@ class DocumentWizardView(DialogView):
         self.headerbar.pack_end(self.create_button)
         self.headerbar.pack_end(self.next_button)
 
-        self.notebook = Gtk.Notebook()
-        self.notebook.set_show_tabs(False)
-        self.notebook.set_show_border(False)
-        self.center_box.set_center_widget(self.notebook)
+        self.page_stack = Gtk.Stack()
+        self.center_box.set_center_widget(self.page_stack)
         self.topbox.append(self.center_box)
 
 

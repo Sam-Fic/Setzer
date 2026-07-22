@@ -23,8 +23,8 @@ from gi.repository import Gtk, Adw
 import setzer.dialogs.preferences.preferences_viewgtk as view
 import setzer.dialogs.preferences.pages.page_build_system as page_build_system
 import setzer.dialogs.preferences.pages.page_editor as page_editor
-import setzer.dialogs.preferences.pages.page_font_color as page_font_color
 import setzer.dialogs.preferences.pages.page_autocomplete as page_autocomplete
+import setzer.dialogs.preferences.pages.page_appearance as page_appearance
 from setzer.app.service_locator import ServiceLocator
 
 
@@ -41,19 +41,19 @@ class PreferencesDialog(object):
     def setup(self):
         self.view = view.Preferences()
 
+        self.page_appearance = page_appearance.PageAppearanceColors(self, self.settings)
         self.page_build_system = page_build_system.PageBuildSystem(self, self.settings)
         self.page_editor = page_editor.PageEditor(self, self.settings)
-        self.page_font_color = page_font_color.PageFontColor(self, self.settings, self.main_window)
         self.page_autocomplete = page_autocomplete.PageAutocomplete(self, self.settings)
 
+        self.view.add(self.page_appearance.view)
         self.view.add(self.page_build_system.view)
         self.view.add(self.page_editor.view)
-        self.view.add(self.page_font_color.view)
         self.view.add(self.page_autocomplete.view)
 
+        self.page_appearance.init()
         self.page_build_system.init()
         self.page_editor.init()
-        self.page_font_color.init()
         self.page_autocomplete.init()
 
     def on_check_button_toggle(self, button, preference_name):

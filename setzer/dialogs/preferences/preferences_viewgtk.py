@@ -27,3 +27,4 @@ class Preferences(Adw.PreferencesDialog):
         Adw.PreferencesDialog.__init__(self)
         self.set_title(_('Preferences'))
         self.set_search_enabled(True)
+        self.add_css_class('preferences')

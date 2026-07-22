@@ -28,6 +28,7 @@ class PreviewPanelView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
+        self.set_size_request(300, -1)
         self.add_css_class('preview')
 
         self.zoom_out_button = Gtk.Button(icon_name='zoom-out-symbolic')
@@ -78,19 +79,12 @@ class PreviewPanelView(Gtk.Box):
         self.action_bar.pack_start(self.action_bar_left)
         self.action_bar.pack_end(self.action_bar_right)
 
-        self.notebook = Gtk.Notebook()
-        self.notebook.set_show_tabs(False)
-        self.notebook.set_show_border(False)
-        self.notebook.set_vexpand(True)
-        self.notebook.insert_page(Gtk.Box(), None, 0)
+        self.stack = Gtk.Stack()
+        self.stack.set_vexpand(True)
+        self.empty_placeholder = Gtk.Box()
+        self.stack.add_named(self.empty_placeholder, 'empty')
 
         self.append(self.action_bar)
-        self.append(self.notebook)
-
-    def do_get_request_mode(self):
-        return Gtk.SizeRequestMode.CONSTANT_SIZE
-                     
-    def do_get_preferred_width(self):
-        return 300, 500
+        self.append(self.stack)
 
 

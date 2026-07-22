@@ -55,7 +55,7 @@ class SymbolsPage(object):
         self.view.prev_button.connect('clicked', self.on_prev_button_clicked)
         self.view.search_button.connect('toggled', self.on_search_button_toggled)
         self.view.search_close_button.connect('clicked', self.on_search_close_button_clicked)
-        self.view.search_entry.connect('stop_search', self.on_search_stopped)
+        self.view.search_entry.connect('stop-search', self.on_search_stopped)
         self.view.search_entry.connect('changed', self.on_search_changed)
 
     def update_recent_widget(self):

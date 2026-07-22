@@ -6,49 +6,40 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
 from gi.repository import GLib
 
-from setzer.popovers.helpers.standard_popover import StandardMenuViewBase
+from setzer.popovers.helpers.gio_menu_builder import GioMenuBuilder
 
 
-class MathMenu(object):
+class MathMenu(GioMenuBuilder):
 
     def __init__(self, popover_manager=None):
-        self.view = MathMenuView()
-
-
-class MathMenuView(StandardMenuViewBase):
-
-    def __init__(self):
-        StandardMenuViewBase.__init__(self)
-
-        self.set_width(288)
+        GioMenuBuilder.__init__(self)
 
         self.add_action_button('main', _('Include AMS Packages'), 'win.add-packages', GLib.Variant('as', ['amsmath', 'amssymb', 'amsfonts', 'amsthm']))
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        self.add_separator()
         self.add_before_after_item('main', _('Inline Math Section') + ' ($ ... $)', ['$ ', ' $'], shortcut=_('Ctrl') + '+M')
         self.add_before_after_item('main', _('Display Math Section') + ' (\\[ ... \\])', ['\\[ ', ' \\]'], shortcut=_('Shift') + '+Ctrl' + '+M')
         self.add_menu_button(_('Math Environments'), 'math_environments')
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        self.add_separator()
         self.add_before_after_item('main', _('Subscript') + ' (_{})', ['_{', '}'], shortcut=_('Shift') + '+' + _('Ctrl') + '+D')
         self.add_before_after_item('main', _('Superscript') + ' (^{})', ['^{', '}'], shortcut=_('Shift') + '+' + _('Ctrl') + '+U')
         self.add_insert_symbol_item('main', _('Fraction') + ' (\\frac)', ['\\frac{•}{•}'], shortcut=_('Shift') + '+Alt' + '+F')
         self.add_before_after_item('main', _('Square Root') + ' (\\sqrt)', ['\\sqrt{', '}'])
         self.add_insert_symbol_item('main', '\\left', ['\\left •'], shortcut=_('Shift') + '+' + _('Ctrl') + '+L')
         self.add_insert_symbol_item('main', '\\right', ['\\right •'], shortcut=_('Shift') + '+' + _('Ctrl') + '+R')
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        self.add_separator()
         self.add_menu_button(_('Math Functions'), 'math_functions')
         self.add_menu_button(_('Math Font Styles'), 'math_font_styles')
         self.add_menu_button(_('Math Stacking Symbols'), 'math_stacking_symbols')
@@ -57,7 +48,6 @@ class MathMenuView(StandardMenuViewBase):
 
         # submenu: math environments
         self.add_page('math_environments', _('Math Environments'))
-
         self.add_before_after_item('math_environments', 'equation', ['\\begin{equation}\n\t', '\n\\end{equation}'], shortcut=_('Shift') + '+' + _('Ctrl') + '+N')
         self.add_before_after_item('math_environments', 'equation*', ['\\begin{equation*}\n\t', '\n\\end{equation*}'])
         self.add_before_after_item('math_environments', 'align', ['\\begin{align}\n\t', '\n\\end{align}'])
@@ -71,40 +61,10 @@ class MathMenuView(StandardMenuViewBase):
         self.add_before_after_item('math_environments', 'multline', ['\\begin{multline}\n\t', '\n\\end{multline}'])
         self.add_before_after_item('math_environments', 'multline*', ['\\begin{multline*}\n\t', '\n\\end{multline*}'])
 
-        # submenu: math functions
+        # submenu: math functions (flat list — Gio.Menu scrolls natively)
         self.add_page('math_functions', _('Math Functions'))
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        vbox.set_hexpand(True)
-        for math_function in ['arccos', 'arcsin', 'arctan', 'cos', 'cosh', 'cot', 'coth', 'csc', 'deg', 'det', 'dim', 'exp', 'gcd', 'hom', 'inf']:
-            button = self._make_function_button(math_function)
-            vbox.append(button)
-        hbox.append(vbox)
-        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        vbox.set_hexpand(True)
-        for math_function in ['ker', 'lg', 'lim', 'liminf', 'limsup', 'ln', 'log', 'max', 'min', 'sec', 'sin', 'sinh', 'sup', 'tan', 'tanh']:
-            button = self._make_function_button(math_function)
-            vbox.append(button)
-        hbox.append(vbox)
-        self.add_widget(hbox, 'math_functions')
-
-    def _make_function_button(self, math_function):
-        button = Gtk.Button()
-        button.set_has_frame(False)
-        button.add_css_class('flat')
-        button.set_hexpand(True)
-        button.set_halign(Gtk.Align.START)
-        button.set_label('\\' + math_function)
-        button.set_action_name('win.insert-symbol')
-        button.set_action_target_value(GLib.Variant('as', ['\\' + math_function + ' ']))
-        button.connect('clicked', self.on_function_clicked)
-        return button
-
-    def on_function_clicked(self, button):
-        button.activate()
-        if 'math_functions' in self.pages:
-            self.pages['math_functions'].popdown()
-        self.popdown()
+        for math_function in ['arccos', 'arcsin', 'arctan', 'cos', 'cosh', 'cot', 'coth', 'csc', 'deg', 'det', 'dim', 'exp', 'gcd', 'hom', 'inf', 'ker', 'lg', 'lim', 'liminf', 'limsup', 'ln', 'log', 'max', 'min', 'sec', 'sin', 'sinh', 'sup', 'tan', 'tanh']:
+            self.add_insert_symbol_item('math_functions', '\\' + math_function, ['\\' + math_function + ' '])
 
         # submenu: math font styles
         self.add_page('math_font_styles', _('Math Font Styles'))
@@ -128,7 +88,7 @@ class MathMenuView(StandardMenuViewBase):
         self.add_before_after_item('math_stacking_symbols', '\\stackrel{}{}', ['\\stackrel{•}{', '}'])
         self.add_before_after_item('math_stacking_symbols', '\\overset{}{}', ['\\overset{•}{', '}'])
         self.add_before_after_item('math_stacking_symbols', '\\underset{}{}', ['\\underset{•}{', '}'])
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), 'math_stacking_symbols')
+        self.add_separator('math_stacking_symbols')
         self.add_before_after_item('math_stacking_symbols', 'cases', ['\\begin{cases}\n\t', '\n\\end{cases}'])
         self.add_before_after_item('math_stacking_symbols', 'split', ['\\begin{split}\n\t', '\n\\end{split}'])
 
@@ -155,5 +115,3 @@ class MathMenuView(StandardMenuViewBase):
         self.add_insert_symbol_item('math_spaces', 'Enspace', ['\\enspace '])
         self.add_insert_symbol_item('math_spaces', 'One Quad', ['\\quad '])
         self.add_insert_symbol_item('math_spaces', 'Two Quads', ['\\qquad '])
-
-

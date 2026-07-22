@@ -46,9 +46,9 @@ class Search(Observable):
         self.search_context.set_highlight(True)
 
         self.view.entry.connect('changed', self.on_search_entry_changed)
-        self.view.entry.connect('stop_search', self.on_search_stop)
-        self.view.entry.connect('next_match', self.on_search_next_match)
-        self.view.entry.connect('previous_match', self.on_search_previous_match)
+        self.view.entry.connect('stop-search', self.on_search_stop)
+        self.view.entry.connect('next-match', self.on_search_next_match)
+        self.view.entry.connect('previous-match', self.on_search_previous_match)
         self.view.entry.connect('activate', self.on_search_entry_activate)
         self.view.close_button.connect('clicked', self.on_search_close_button_click)
         self.view.next_button.connect('clicked', self.on_search_next_button_click)
@@ -179,26 +179,22 @@ class Search(Observable):
     def hide_search_bar(self):
         self.on_search_next_match(None, True)
         self.document_view.source_view.grab_focus()
-        self.view.set_reveal_child(False)
+        self.view.set_search_mode(False)
         self.view.entry.set_text('')
         self.search_bar_mode = None
         self.add_change_code('mode_changed')
 
     def set_mode_search(self):
-        self.view.set_reveal_child(True)
+        self.view.set_search_mode(True)
         GLib.idle_add(self.search_entry_grab_focus, None)
         self.search_bar_mode = 'search'
-        self.view.entry.set_size_request(300, -1)
-        self.view.match_counter.set_size_request(270, -1)
         self.view.replace_wrapper.set_visible(False)
         self.add_change_code('mode_changed')
 
     def set_mode_replace(self):
-        self.view.set_reveal_child(True)
+        self.view.set_search_mode(True)
         GLib.idle_add(self.search_entry_grab_focus, None)
         self.search_bar_mode = 'replace'
-        self.view.entry.set_size_request(230, -1)
-        self.view.match_counter.set_size_request(200, -1)
         self.view.replace_wrapper.set_visible(True)
         self.add_change_code('mode_changed')
 
@@ -218,7 +214,6 @@ class Search(Observable):
 
     def set_match_counter(self, match_no=-1, total=-1):
         search_bar = self.view
-        search_bar.match_counter.set_margin_end(6 + 2*search_bar.next_button.get_allocated_width())
         if total == -1:
             search_bar.match_counter.set_text('')
             search_bar.prev_button.set_sensitive(False)

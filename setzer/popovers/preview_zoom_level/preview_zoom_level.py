@@ -24,11 +24,11 @@ class PreviewZoomLevel(object):
         self.workspace = workspace
         self.view = PreviewZoomLevelView(popover_manager)
 
-        self.view.button_fit_to_width.connect('clicked', self.on_fit_to_width_button_clicked)
-        self.view.button_fit_to_text_width.connect('clicked', self.on_fit_to_text_width_button_clicked)
-        self.view.button_fit_to_height.connect('clicked', self.on_fit_to_height_button_clicked)
-        for level, button in self.view.zoom_level_buttons.items():
-            button.connect('clicked', self.on_set_zoom_button_clicked, level)
+        self.view.set_callback(self.view.button_fit_to_width, self.on_fit_to_width_button_clicked)
+        self.view.set_callback(self.view.button_fit_to_text_width, self.on_fit_to_text_width_button_clicked)
+        self.view.set_callback(self.view.button_fit_to_height, self.on_fit_to_height_button_clicked)
+        for level, row in self.view.zoom_level_buttons.items():
+            self.view.set_callback(row, self.on_set_zoom_button_clicked, level)
 
     def on_fit_to_width_button_clicked(self, button):
         document = self.workspace.get_root_or_active_latex_document()

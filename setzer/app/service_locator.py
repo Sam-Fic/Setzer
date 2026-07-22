@@ -17,8 +17,11 @@
 
 import gi
 gi.require_version('GtkSource', '5')
+gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
 from gi.repository import GtkSource
 from gi.repository import GLib
+from gi.repository import Adw
 
 import re
 import os, os.path
@@ -115,7 +118,12 @@ class ServiceLocator():
         else: return source_language_manager.get_language('latex')
 
     def get_style_scheme():
-        name = ServiceLocator.get_settings().get_value('preferences', 'color_scheme')
+        # 编辑器配色跟随应用深浅色（Preferences 中不再提供独立选择）
+        try:
+            dark = Adw.StyleManager.get_default().get_dark()
+        except Exception:
+            dark = False
+        name = 'default-dark' if dark else 'default'
         return ServiceLocator.get_source_style_scheme_manager().get_scheme(name)
 
 

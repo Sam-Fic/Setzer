@@ -21,10 +21,11 @@ from gi.repository import Gtk
 
 
 class DocumentView(Gtk.Box):
-    
+
     def __init__(self, document):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.HORIZONTAL)
+        self.set_size_request(200, -1)
         self.add_css_class('document')
 
         self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
@@ -41,6 +42,7 @@ class DocumentView(Gtk.Box):
         self.scrolled_window.set_child(self.source_view)
         self.scrolled_window.set_hexpand(True)
 
+        # margin: 左侧空白容器，gutter（行号等）通过 set_size_request 调整宽度
         self.margin = Gtk.Box()
         self.margin.set_hexpand(False)
 
@@ -54,11 +56,5 @@ class DocumentView(Gtk.Box):
 
         self.vbox.append(self.overlay)
         self.append(self.vbox)
-
-    def do_get_request_mode(self):
-        return Gtk.SizeRequestMode.CONSTANT_SIZE
-                     
-    def do_get_preferred_width(self):
-        return 200, 600
 
 

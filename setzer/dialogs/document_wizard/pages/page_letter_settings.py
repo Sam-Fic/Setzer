@@ -6,19 +6,20 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
 from gi.repository import Gtk
-from gi.repository import GLib
+from gi.repository import Adw
 
 from setzer.dialogs.document_wizard.pages.page import Page, PageView
 
@@ -32,32 +33,32 @@ class LetterSettingsPage(Page):
         self.view = LetterSettingsPageView()
 
     def observe_view(self):
-        def format_button_toggled(button, format_name):
-            if button.get_active():
-                self.current_values['letter']['page_format'] = format_name
+        def format_changed(combo, pspec):
+            selected = combo.get_selected()
+            if selected != Gtk.INVALID_LIST_POSITION:
+                self.current_values['letter']['page_format'] = self.view.page_format_names[selected]
 
         def scale_change_value(scale, scroll, value, user_data=None):
             self.current_values['letter']['font_size'] = int(value)
 
-        def margin_changed(button, side):
-            self.current_values['letter']['margin_' + side] = button.get_value()
+        def margin_changed(row, pspec, side):
+            self.current_values['letter']['margin_' + side] = row.get_value()
 
-        for name, button in self.view.page_format_buttons.items():
-            button.connect('toggled', format_button_toggled, name)
+        self.view.page_format_combo.connect('notify::selected', format_changed)
         self.view.font_size_entry.connect('change-value', scale_change_value)
-        self.view.option_default_margins.connect('toggled', self.option_default_margins_toggled, 'default_margins')
-        self.view.margins_button_left.connect('value-changed', margin_changed, 'left')
-        self.view.margins_button_right.connect('value-changed', margin_changed, 'right')
-        self.view.margins_button_top.connect('value-changed', margin_changed, 'top')
-        self.view.margins_button_bottom.connect('value-changed', margin_changed, 'bottom')
+        self.view.option_default_margins.connect('notify::active', self.option_default_margins_toggled, 'default_margins')
+        self.view.margins_button_left.connect('notify::value', margin_changed, 'left')
+        self.view.margins_button_right.connect('notify::value', margin_changed, 'right')
+        self.view.margins_button_top.connect('notify::value', margin_changed, 'top')
+        self.view.margins_button_bottom.connect('notify::value', margin_changed, 'bottom')
 
-    def option_default_margins_toggled(self, button, option_name=None):
-        for spinbutton in [self.view.margins_button_left, self.view.margins_button_right, self.view.margins_button_top, self.view.margins_button_bottom]:
-            spinbutton.set_sensitive(not button.get_active())
-            if button.get_active():
-                spinbutton.set_value(3.5)
+    def option_default_margins_toggled(self, row, pspec=None, option_name=None):
+        for spinrow in [self.view.margins_button_left, self.view.margins_button_right, self.view.margins_button_top, self.view.margins_button_bottom]:
+            spinrow.set_sensitive(not row.get_active())
+            if row.get_active():
+                spinrow.set_value(3.5)
         if option_name != None:
-            self.current_values['letter']['option_' + option_name] = button.get_active()
+            self.current_values['letter']['option_' + option_name] = row.get_active()
 
     def load_presets(self, presets):
         for setter_function, value_name in [
@@ -76,8 +77,7 @@ class LetterSettingsPage(Page):
 
         try: value = presets['letter']['page_format']
         except Exception: value = self.current_values['letter']['page_format']
-        for name, button in self.view.page_format_buttons.items():
-            button.set_active(name == value)
+        self.view.page_format_combo.set_selected(self.view.page_format_names.index(value))
 
         self.option_default_margins_toggled(self.view.option_default_margins)
 
@@ -94,22 +94,33 @@ class LetterSettingsPageView(PageView):
         self.header.set_text(_('Letter settings'))
         self.headerbar_subtitle = _('Step') + ' 2: ' + _('Letter settings')
 
-        self.right_content.append(self.subheader_page_format)
-        self.right_content.append(self.page_format_list)
+        self.group_page_format = Adw.PreferencesGroup()
+        self.group_page_format.set_title(_('Page format'))
+        self.group_page_format.add(self.page_format_combo)
 
-        self.left_content.append(self.subheader_options)
-        self.left_content.append(self.option_twocolumn)
-        self.left_content.append(self.subheader_font_size)
-        self.left_content.append(self.font_size_entry)
-        self.left_content.append(self.subheader_margins)
-        self.left_content.append(self.option_default_margins)
-        self.left_content.append(self.margins_box)
-        self.left_content.append(self.margins_description)
+        self.group_font_size = Adw.PreferencesGroup()
+        self.group_font_size.set_title(_('Font size'))
+        self.group_font_size.add(self.font_size_row)
 
+        self.group_margins = Adw.PreferencesGroup()
+        self.group_margins.set_title(_('Page margins'))
+        self.group_margins.set_description(_('All values are in cm (1 inch ≅ 2.54 cm).'))
+        self.group_margins.add(self.option_default_margins)
+        self.group_margins.add(self.margins_button_left)
+        self.group_margins.add(self.margins_button_right)
+        self.group_margins.add(self.margins_button_top)
+        self.group_margins.add(self.margins_button_bottom)
+
+        self.left_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        self.left_content.append(self.group_font_size)
+        self.left_content.append(self.group_margins)
+
+        self.right_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.right_content.append(self.group_page_format)
+
+        self.content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
         self.content.append(self.left_content)
+        self.content.append(self.right_content)
 
         self.append(self.header)
-        self.append(self.right_content)
         self.append(self.content)
-
-

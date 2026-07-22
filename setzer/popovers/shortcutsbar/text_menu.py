@@ -6,49 +6,40 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
 from gi.repository import GLib
 
-from setzer.popovers.helpers.standard_popover import StandardMenuViewBase
+from setzer.popovers.helpers.gio_menu_builder import GioMenuBuilder
 
 
-class TextMenu(object):
+class TextMenu(GioMenuBuilder):
 
     def __init__(self, popover_manager=None):
-        self.view = TextMenuView()
-
-
-class TextMenuView(StandardMenuViewBase):
-
-    def __init__(self):
-        StandardMenuViewBase.__init__(self)
-
-        self.set_width(288)
+        GioMenuBuilder.__init__(self)
 
         self.add_menu_button(_('Font Styles'), 'font_styles')
         self.add_menu_button(_('Font Sizes'), 'font_sizes')
         self.add_menu_button(_('Alignment'), 'text_alignment')
         self.add_menu_button(_('Vertical Spacing'), 'vertical_spacing')
         self.add_menu_button(_('International Accents'), 'international_accents')
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        self.add_separator()
         self.add_menu_button(_('Sectioning'), 'sectioning')
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        self.add_separator()
         self.add_before_after_item('main', _('Environment'), ['\\begin{•}\n\t', '\n\\end{•}'], shortcut=_('Ctrl') + '+E')
         self.add_before_after_item('main', _('Verbatim Environment'), ['\\begin{verbatim}\n\t', '\n\\end{verbatim}'])
         self.add_menu_button(_('List Environments'), 'list_environments')
         self.add_menu_button(_('Quotations'), 'quotations')
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        self.add_separator()
         self.add_menu_button(_('Cross References'), 'cross_references')
         self.add_before_after_item('main', _('Footnote'), ['\\footnote{', '}'])
 
@@ -115,7 +106,7 @@ class TextMenuView(StandardMenuViewBase):
         self.add_insert_symbol_item('sectioning', _('Subsubsection'), ['\\subsubsection{•}'])
         self.add_insert_symbol_item('sectioning', _('Paragraph'), ['\\paragraph{•}'])
         self.add_insert_symbol_item('sectioning', _('Subparagraph'), ['\\subparagraph{•}'])
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), 'sectioning')
+        self.add_separator('sectioning')
         self.add_insert_symbol_item('sectioning', _('Part') + '*', ['\\part*{•}'])
         self.add_insert_symbol_item('sectioning', _('Chapter')+'*', ['\\chapter*{•}'])
         self.add_insert_symbol_item('sectioning', _('Section')+'*', ['\\section*{•}'])
@@ -129,7 +120,7 @@ class TextMenuView(StandardMenuViewBase):
         self.add_before_after_item('list_environments', _('Bulleted List') + ' (itemize)', ['\\begin{itemize}\n\t', '\n\\end{itemize}'])
         self.add_before_after_item('list_environments', _('Numbered List') + ' (enumerate)', ['\\begin{enumerate}\n\t', '\n\\end{enumerate}'])
         self.add_before_after_item('list_environments', _('List with Bold Labels') + ' (description)', ['\\begin{description}\n\t', '\n\\end{description}'])
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), 'list_environments')
+        self.add_separator('list_environments')
         self.add_insert_symbol_item('list_environments', _('List Item'), ['\\item •'], shortcut=_('Shift') + '+' + _('Ctrl') + '+I')
 
         # quotations submenu
@@ -144,5 +135,3 @@ class TextMenuView(StandardMenuViewBase):
         self.add_insert_symbol_item('cross_references', _('Reference') + ' (\\ref)', ['\\ref{•}'])
         self.add_insert_symbol_item('cross_references', _('Equation Reference') + ' (\\eqref)', ['\\eqref{•}'])
         self.add_insert_symbol_item('cross_references', _('Page Reference') + ' (\\pageref)', ['\\pageref{•}'])
-
-

@@ -74,7 +74,10 @@ class HeaderBar(object):
         self.new_document_button.set_child(box)
         self.new_document_button.set_can_focus(False)
         self.new_document_button.set_tooltip_text(_('Create a new document'))
-        self.new_document_button.set_popover(PopoverManager.get_popover('new_document').view.popover)
+        self.new_document_button.set_menu_model(PopoverManager.get_popover('new_document').view.model)
+        popover = self.new_document_button.get_popover()
+        if popover is not None:
+            popover.add_css_class('menu')
 
         self.widget.pack_start(self.open_document_button)
         self.widget.pack_start(self.open_document_blank_button)

@@ -39,9 +39,9 @@ class Shortcutsbar(object):
         self.workspace.connect('show_build_log_state_change', self.update_buttons)
         self.workspace.connect('root_state_change', self.on_root_state_change)
 
-        self.preview_paned = ServiceLocator.get_main_window().preview_paned
+        self.build_log_paned = ServiceLocator.get_main_window().build_log_paned
         self.width = 0
-        self.preview_paned.connect('notify::position', self.on_paned_position_changed)
+        self.build_log_paned.connect('width-changed', self.on_paned_width_changed)
 
         self.document = self.workspace.active_document
         if self.document != None:
@@ -73,8 +73,8 @@ class Shortcutsbar(object):
     def on_root_state_change(self, workspace, state):
         self.update_buttons()
 
-    def on_paned_position_changed(self, paned, position=None):
-        self.width = paned.get_position()
+    def on_paned_width_changed(self, widget):
+        self.width = widget.get_allocated_width()
         self.update_wizard_button(animate=False)
 
     def on_document_changed(self, workspace=None, parameter=None):

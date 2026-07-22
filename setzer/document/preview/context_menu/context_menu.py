@@ -19,17 +19,17 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gdk, Gtk
 
-from setzer.popovers.helpers.standard_popover import StandardMenuPopover
+from setzer.popovers.helpers.adw_popover_menu import AdwPopoverMenu
 
 
 class ContextMenu(object):
     '''Preview right-click (secondary-button) context menu.
 
-    Migrated from MenuBuilder.create_menu() (PopoverMenu) to StandardMenuPopover.
-    Each entry is a plain menu item (add_item, no action); row activation calls
-    button.activate() (emitting 'clicked' for the presenter's callback) and then
-    closes the popover. zoom_in/out store their rows so update_buttons can
-    disable the whole row (insensitive rows are not activatable).
+    Built on AdwPopoverMenu (Gtk.Popover + Gtk.ListBox + Adw.ActionRow with
+    the ``boxed-list`` style). Each entry is a callback row
+    (``add_callback_item``); row activation invokes the presenter's callback
+    and closes the popover. zoom_in/out store their rows so update_buttons
+    can disable the whole row (insensitive rows are not activatable).
     '''
 
     def __init__(self, preview, preview_view):
@@ -38,9 +38,12 @@ class ContextMenu(object):
 
         self.popup_offset_x, self.popup_offset_y = 0, 0
 
-        self.popover_pointer = StandardMenuPopover()
+        self.popover_pointer = AdwPopoverMenu()
         self.popover_pointer.set_position(Gtk.PositionType.BOTTOM)
-        self.popover_pointer.set_parent(self.preview_view.content.content)
+        # Parent the popover to the (viewport-sized) ScrolledWindow so its
+        # pointing-to rectangle is interpreted in viewport coordinates, which
+        # is what ``on_secondary_button_press`` computes.
+        self.popover_pointer.set_parent(self.preview_view.content.view)
         self.popover_pointer.set_size_request(260, -1)
         self.popover_pointer.set_has_arrow(False)
         self.popover_pointer.set_offset(130, 0)
@@ -74,9 +77,7 @@ class ContextMenu(object):
         self.add_callback_button(popover, _('Fit to Height'), self.zoom_fit_to_height)
 
     def add_callback_button(self, popover, label, callback):
-        row = popover.add_item(label)
-        row.get_child().connect('clicked', callback)
-        return row
+        return popover.add_callback_item(label, callback)
 
     def popup_at_cursor(self, x, y):
         rect = Gdk.Rectangle()

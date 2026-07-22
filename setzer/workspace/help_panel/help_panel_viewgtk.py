@@ -6,18 +6,18 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
-gi.require_versions({'Gtk': '4.0', 'WebKit': '6.0'})
-from gi.repository import WebKit, Gtk
+gi.require_versions({'Gtk': '4.0', 'WebKit': '6.0', 'Adw': '1'})
+from gi.repository import WebKit, Gtk, Adw
 
 from setzer.widgets.search_entry.search_entry import SearchEntry
 
@@ -27,6 +27,7 @@ class HelpPanelView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
+        self.set_size_request(396, -1)
         self.add_css_class('help')
 
         self.action_bar = Gtk.ActionBar()
@@ -68,27 +69,39 @@ class HelpPanelView(Gtk.Box):
 
         self.append(self.action_bar)
 
-        self.search_widget = Gtk.CenterBox()
-        self.search_widget.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.search_vbox = Gtk.CenterBox()
-        self.search_vbox.set_orientation(Gtk.Orientation.VERTICAL)
-        self.search_vbox.set_margin_start(18)
-        self.search_vbox.set_margin_end(18)
-        self.search_entry = SearchEntry()
-        self.search_entry.set_size_request(360, -1)
-        self.search_entry.set_margin_bottom(21)
-        self.search_result_items = list()
-        self.search_results = Gtk.ListBox()
-        self.search_results.set_size_request(300, 359)
-        self.search_results.set_can_focus(False)
-        self.search_results.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.search_results.set_margin_start(26)
-        self.search_results.set_margin_end(26)
+        # Search page: a single Adw.Clamp wraps the vertical search content,
+        # giving native bounded/centered width. The entry sits at the top,
+        # results scroll below, and a compact StatusPage shows the no-results
+        # empty state. This replaces the former double-CenterBox floating blob.
         self.search_content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.search_content_box.set_margin_top(12)
+        self.search_content_box.set_margin_bottom(12)
+
+        self.search_entry = SearchEntry()
         self.search_content_box.append(self.search_entry)
-        self.search_content_box.append(self.search_results)
-        self.search_vbox.set_center_widget(self.search_content_box)
-        self.search_widget.set_center_widget(self.search_vbox)
+
+        self.search_results = Gtk.ListBox()
+        self.search_results.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.search_results.set_can_focus(False)
+        self.search_results.set_margin_top(12)
+        self.search_scroll = Gtk.ScrolledWindow()
+        self.search_scroll.set_vexpand(True)
+        self.search_scroll.set_child(self.search_results)
+        self.search_content_box.append(self.search_scroll)
+
+        self.no_results_slate = Adw.StatusPage()
+        self.no_results_slate.add_css_class('compact')
+        self.no_results_slate.set_icon_name('system-search-symbolic')
+        self.no_results_slate.set_title(_('No results found'))
+        self.no_results_slate.set_visible(False)
+        self.no_results_slate.set_vexpand(True)
+        self.no_results_slate.set_valign(Gtk.Align.CENTER)
+        self.search_content_box.append(self.no_results_slate)
+
+        self.search_clamp = Adw.Clamp()
+        self.search_clamp.set_maximum_size(600)
+        self.search_clamp.set_tightening_threshold(400)
+        self.search_clamp.set_child(self.search_content_box)
 
         self.content = WebKit.WebView()
         self.user_content_manager = self.content.get_user_content_manager()
@@ -102,15 +115,11 @@ class HelpPanelView(Gtk.Box):
         self.stack = Gtk.Stack()
         self.stack.set_vexpand(True)
         self.stack.add_named(self.content, 'content')
-        self.stack.add_named(self.search_widget, 'search')
+        self.stack.add_named(self.search_clamp, 'search')
 
         self.append(self.stack)
 
-    def do_get_request_mode(self):
-        return Gtk.SizeRequestMode.CONSTANT_SIZE
-                     
-    def do_get_preferred_width(self):
-        return 396, 500
+        self.search_result_items = list()
 
 
 class SearchResultView(Gtk.ListBoxRow):
@@ -131,5 +140,3 @@ class SearchResultView(Gtk.ListBoxRow):
         self.box.append(self.text_label)
         self.box.append(self.location_label)
         self.set_child(self.box)
-
-

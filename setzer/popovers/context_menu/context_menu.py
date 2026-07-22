@@ -47,8 +47,6 @@ class ContextMenu(object):
 
     def on_new_active_document(self, workspace=None, parameter=None):
         document = self.workspace.active_document
-        self.view.comment_button.set_visible(document != None and document.is_latex_document())
-        self.view.sync_button.set_visible(document != None and document.is_latex_document())
-        self.view.latex_buttons_separator.set_visible(document != None and document.is_latex_document())
+        self.view.rebuild_latex_section(document != None and document.is_latex_document())
 
 

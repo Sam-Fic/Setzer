@@ -17,9 +17,11 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
 from gi.repository import Gtk
 from gi.repository import Gdk
 from gi.repository import Gio
+from gi.repository import Adw
 
 from setzer.widgets.scrolling_widget.scrolling_widget import ScrollingWidget
 
@@ -61,30 +63,16 @@ class PreviewView(Gtk.Box):
         self.target_label.set_visible(target_string != '')
 
 
-class BlankSlateView(Gtk.Box):
+def BlankSlateView():
+    '''Preview empty-state placeholder.
 
-    def __init__(self):
-        Gtk.Box.__init__(self)
-        self.set_orientation(Gtk.Orientation.VERTICAL)
-
-        drawing_area = Gtk.Box()
-        drawing_area.set_vexpand(True)
-        self.append(drawing_area)
-
-        image = Gtk.Image(icon_name='document-properties-symbolic')
-        image.set_pixel_size(150)
-        self.append(image)
-
-        header = Gtk.Label(label=_('No preview available'))
-        self.append(header)
-
-        body = Gtk.Label(label=_('To show a .pdf preview of your document, click the build button in the headerbar.'))
-        body.add_css_class('body')
-        body.set_wrap(True)
-        self.append(body)
-
-        drawing_area = Gtk.Box()
-        drawing_area.set_vexpand(True)
-        self.append(drawing_area)
+    Returns a compact Adw.StatusPage. Adw.StatusPage 是 final 类型无法子类化，
+    故以工厂函数返回实例，替代原手绘 Gtk.Box + Gtk.Image + Gtk.Label 布局。'''
+    page = Adw.StatusPage()
+    page.add_css_class('compact')
+    page.set_icon_name('document-properties-symbolic')
+    page.set_title(_('No preview available'))
+    page.set_description(_('To show a .pdf preview of your document, click the build button in the headerbar.'))
+    return page
 
 

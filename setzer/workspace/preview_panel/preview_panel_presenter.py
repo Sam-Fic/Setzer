@@ -24,7 +24,7 @@ class PreviewPanelPresenter(object):
         self.workspace = workspace
         self.main_window = ServiceLocator.get_main_window()
         self.view = self.main_window.preview_panel
-        self.notebook = self.main_window.preview_panel.notebook
+        self.stack = self.main_window.preview_panel.stack
         self.document = None
 
         self.workspace.connect('new_document', self.on_new_document)
@@ -46,11 +46,11 @@ class PreviewPanelPresenter(object):
 
     def on_new_document(self, workspace, document):
         if document.is_latex_document():
-            self.notebook.append_page(document.preview.view, None)
+            self.stack.add_child(document.preview.view)
 
     def on_document_removed(self, workspace, document):
         if document.is_latex_document():
-            self.notebook.remove_page(self.notebook.page_num(document.preview.view))
+            self.stack.remove(document.preview.view)
 
     def on_new_active_document(self, workspace, document):
         self.set_preview_document()
@@ -64,11 +64,11 @@ class PreviewPanelPresenter(object):
 
         self.document = self.workspace.get_root_or_active_latex_document()
         if self.document == None:
-            self.notebook.set_current_page(0)
+            self.stack.set_visible_child(self.view.empty_placeholder)
             self.update_label()
             self.update_buttons()
         else:
-            self.notebook.set_current_page(self.notebook.page_num(self.document.preview.view))
+            self.stack.set_visible_child(self.document.preview.view)
             self.update_label()
             self.update_buttons()
             self.update_zoom_level()

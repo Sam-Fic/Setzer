@@ -6,19 +6,20 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
 from gi.repository import Gtk
-from gi.repository import GLib
+from gi.repository import Adw
 
 from setzer.dialogs.document_wizard.pages.page import Page, PageView
 
@@ -32,40 +33,40 @@ class ReportSettingsPage(Page):
         self.view = ReportSettingsPageView()
 
     def observe_view(self):
-        def format_button_toggled(button, format_name):
-            if button.get_active():
-                self.current_values['report']['page_format'] = format_name
+        def format_changed(combo, pspec):
+            selected = combo.get_selected()
+            if selected != Gtk.INVALID_LIST_POSITION:
+                self.current_values['report']['page_format'] = self.view.page_format_names[selected]
 
         def scale_change_value(scale, scroll, value, user_data=None):
             self.current_values['report']['font_size'] = int(value)
 
-        def option_toggled(button, option_name):
-            self.current_values['report']['option_' + option_name] = button.get_active()
+        def option_toggled(row, pspec, option_name):
+            self.current_values['report']['option_' + option_name] = row.get_active()
 
-        def margin_changed(button, side):
-            self.current_values['report']['margin_' + side] = button.get_value()
+        def margin_changed(row, pspec, side):
+            self.current_values['report']['margin_' + side] = row.get_value()
 
-        def on_orientation_toggle(button):
-            self.current_values['report']['is_landscape'] = button.get_active()
+        def on_orientation_toggle(row, pspec):
+            self.current_values['report']['is_landscape'] = row.get_active()
 
-        for name, button in self.view.page_format_buttons.items():
-            button.connect('toggled', format_button_toggled, name)
+        self.view.page_format_combo.connect('notify::selected', format_changed)
         self.view.font_size_entry.connect('change-value', scale_change_value)
-        self.view.option_twocolumn.connect('toggled', option_toggled, 'twocolumn')
-        self.view.option_default_margins.connect('toggled', self.option_default_margins_toggled, 'default_margins')
-        self.view.margins_button_left.connect('value-changed', margin_changed, 'left')
-        self.view.margins_button_right.connect('value-changed', margin_changed, 'right')
-        self.view.margins_button_top.connect('value-changed', margin_changed, 'top')
-        self.view.margins_button_bottom.connect('value-changed', margin_changed, 'bottom')
-        self.view.option_landscape.connect('toggled', on_orientation_toggle)
+        self.view.option_twocolumn.connect('notify::active', option_toggled, 'twocolumn')
+        self.view.option_default_margins.connect('notify::active', self.option_default_margins_toggled, 'default_margins')
+        self.view.margins_button_left.connect('notify::value', margin_changed, 'left')
+        self.view.margins_button_right.connect('notify::value', margin_changed, 'right')
+        self.view.margins_button_top.connect('notify::value', margin_changed, 'top')
+        self.view.margins_button_bottom.connect('notify::value', margin_changed, 'bottom')
+        self.view.option_landscape.connect('notify::active', on_orientation_toggle)
 
-    def option_default_margins_toggled(self, button, option_name=None):
-        for spinbutton in [self.view.margins_button_left, self.view.margins_button_right, self.view.margins_button_top, self.view.margins_button_bottom]:
-            spinbutton.set_sensitive(not button.get_active())
-            if button.get_active():
-                spinbutton.set_value(3.5)
+    def option_default_margins_toggled(self, row, pspec=None, option_name=None):
+        for spinrow in [self.view.margins_button_left, self.view.margins_button_right, self.view.margins_button_top, self.view.margins_button_bottom]:
+            spinrow.set_sensitive(not row.get_active())
+            if row.get_active():
+                spinrow.set_value(3.5)
         if option_name != None:
-            self.current_values['report']['option_' + option_name] = button.get_active()
+            self.current_values['report']['option_' + option_name] = row.get_active()
 
     def load_presets(self, presets):
         for setter_function, value_name in [
@@ -84,8 +85,7 @@ class ReportSettingsPage(Page):
 
         try: value = presets['report']['page_format']
         except Exception: value = self.current_values['report']['page_format']
-        for name, button in self.view.page_format_buttons.items():
-            button.set_active(name == value)
+        self.view.page_format_combo.set_selected(self.view.page_format_names.index(value))
 
         self.option_default_margins_toggled(self.view.option_default_margins)
 
@@ -102,23 +102,39 @@ class ReportSettingsPageView(PageView):
         self.header.set_text(_('Report settings'))
         self.headerbar_subtitle = _('Step') + ' 2: ' + _('Report settings')
 
-        self.right_content.append(self.subheader_page_format)
-        self.right_content.append(self.page_format_list)
+        self.group_page_format = Adw.PreferencesGroup()
+        self.group_page_format.set_title(_('Page format'))
+        self.group_page_format.add(self.page_format_combo)
 
-        self.left_content.append(self.subheader_options)
-        self.left_content.append(self.option_landscape)
-        self.left_content.append(self.option_twocolumn)
-        self.left_content.append(self.subheader_font_size)
-        self.left_content.append(self.font_size_entry)
-        self.left_content.append(self.subheader_margins)
-        self.left_content.append(self.option_default_margins)
-        self.left_content.append(self.margins_box)
-        self.left_content.append(self.margins_description)
+        self.group_options = Adw.PreferencesGroup()
+        self.group_options.set_title(_('Options'))
+        self.group_options.add(self.option_landscape)
+        self.group_options.add(self.option_twocolumn)
 
+        self.group_font_size = Adw.PreferencesGroup()
+        self.group_font_size.set_title(_('Font size'))
+        self.group_font_size.add(self.font_size_row)
+
+        self.group_margins = Adw.PreferencesGroup()
+        self.group_margins.set_title(_('Page margins'))
+        self.group_margins.set_description(_('All values are in cm (1 inch ≅ 2.54 cm).'))
+        self.group_margins.add(self.option_default_margins)
+        self.group_margins.add(self.margins_button_left)
+        self.group_margins.add(self.margins_button_right)
+        self.group_margins.add(self.margins_button_top)
+        self.group_margins.add(self.margins_button_bottom)
+
+        self.left_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        self.left_content.append(self.group_options)
+        self.left_content.append(self.group_font_size)
+        self.left_content.append(self.group_margins)
+
+        self.right_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.right_content.append(self.group_page_format)
+
+        self.content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
         self.content.append(self.left_content)
+        self.content.append(self.right_content)
 
         self.append(self.header)
-        self.append(self.right_content)
         self.append(self.content)
-
-

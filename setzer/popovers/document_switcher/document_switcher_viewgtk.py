@@ -13,13 +13,13 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program; if not, write to the Free Software
-# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
+# along with this program. If not, see <http://www.gnu.org/licenses/>
 
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Pango
+gi.require_version('Adw', '1')
+from gi.repository import Gtk, Adw
 
 import os.path
 
@@ -52,7 +52,7 @@ class DocumentSwitcherView(object):
 
         self.list_box = Gtk.ListBox()
         self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.list_box.add_css_class('menu')
+        self.list_box.add_css_class('boxed-list')
 
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
@@ -78,28 +78,18 @@ class DocumentSwitcherView(object):
             self.list_box.append(row)
 
     def create_row(self, document, root_selection_mode):
-        row = Gtk.ListBoxRow()
+        row = Adw.ActionRow()
         row.document = document
-
-        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-        hbox.set_margin_start(12)
-        hbox.set_margin_end(12)
-        hbox.set_margin_top(8)
-        hbox.set_margin_bottom(8)
 
         doc_type = document.get_document_type()
         icon_name = {'latex': 'document-latex-symbolic',
                      'bibtex': 'document-bibtex-symbolic'}.get(doc_type, 'document-other-symbolic')
         icon = Gtk.Image(icon_name=icon_name)
-        hbox.append(icon)
+        row.add_prefix(icon)
 
         modified_suffix = '*' if document.source_buffer.get_modified() else ''
         root_suffix = '  (root)' if document.get_is_root() else ''
-        label = Gtk.Label(label=os.path.split(document.get_displayname())[1] + modified_suffix + root_suffix)
-        label.set_halign(Gtk.Align.START)
-        label.set_hexpand(True)
-        label.set_ellipsize(Pango.EllipsizeMode.START)
-        hbox.append(label)
+        row.set_title(os.path.split(document.get_displayname())[1] + modified_suffix + root_suffix)
 
         close_button = Gtk.Button.new_from_icon_name('window-close-symbolic')
         close_button.set_has_frame(False)
@@ -107,12 +97,11 @@ class DocumentSwitcherView(object):
         close_button.set_tooltip_text(_('Close document'))
         close_button.add_css_class('flat')
         close_button.row = row
-        hbox.append(close_button)
+        row.add_suffix(close_button)
         row.close_button = close_button
 
         if root_selection_mode and document.get_is_root():
             root_icon = Gtk.Image(icon_name='emblem-ok-symbolic')
-            hbox.append(root_icon)
+            row.add_suffix(root_icon)
 
-        row.set_child(hbox)
         return row

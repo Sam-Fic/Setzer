@@ -6,12 +6,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
@@ -25,6 +25,17 @@ from setzer.helpers.observable import Observable
 
 
 class ScrollingWidget(Observable):
+    '''Scrollable canvas backed by a standard ``Gtk.ScrolledWindow``.
+
+    The child ``Gtk.DrawingArea`` is sized to the full canvas dimensions so
+    that the ``ScrolledWindow`` provides the overlay scrollbars and the
+    viewport clipping. Event controllers attached to the (canvas-sized)
+    ``content`` drawing area report coordinates in canvas/document space, so
+    click handlers emit document coordinates directly. The motion controller
+    is attached to the (viewport-sized) ``view`` so that the tracked cursor
+    stays viewport-relative, matching the expectations of the preview
+    controller/zoom manager.
+    '''
 
     def __init__(self):
         Observable.__init__(self)
@@ -33,25 +44,14 @@ class ScrollingWidget(Observable):
         self.width, self.height = 0, 0
         self.cursor_x, self.cursor_y = None, None
         self.scrolling_multiplier = 2.5
-        self.last_cursor_scrolling_change = time.time()
 
-        self.view = Gtk.Overlay()
+        self.view = Gtk.ScrolledWindow()
+        self.view.set_overlay_scrolling(True)
         self.content = Gtk.DrawingArea()
         self.view.set_child(self.content)
 
-        self.scrollbar_x = Gtk.Scrollbar(orientation=Gtk.Orientation.HORIZONTAL)
-        self.scrollbar_x.set_valign(Gtk.Align.END)
-        self.scrollbar_x.add_css_class('bottom')
-        self.scrollbar_x.add_css_class('overlay-indicator')
-        self.adjustment_x = self.scrollbar_x.get_adjustment()
-        self.view.add_overlay(self.scrollbar_x)
-
-        self.scrollbar_y = Gtk.Scrollbar(orientation=Gtk.Orientation.VERTICAL)
-        self.scrollbar_y.set_halign(Gtk.Align.END)
-        self.scrollbar_y.add_css_class('right')
-        self.scrollbar_y.add_css_class('overlay-indicator')
-        self.adjustment_y = self.scrollbar_y.get_adjustment()
-        self.view.add_overlay(self.scrollbar_y)
+        self.adjustment_x = self.view.get_hadjustment()
+        self.adjustment_y = self.view.get_vadjustment()
 
         self.scrolling_controller = Gtk.EventControllerScroll()
         self.scrolling_controller.set_flags(Gtk.EventControllerScrollFlags.BOTH_AXES | Gtk.EventControllerScrollFlags.KINETIC)
@@ -86,7 +86,6 @@ class ScrollingWidget(Observable):
         self.content.queue_draw()
 
     def scroll_to_position(self, position):
-        window_width = self.width
         yoffset = max(position[1], 0)
         xoffset = max(position[0], 0)
         self.scroll_now([xoffset, yoffset])
@@ -144,44 +143,39 @@ class ScrollingWidget(Observable):
         return False
 
     def on_resize(self, drawing_area, width, height):
-        self.width, self.height = width, height
-        self.adjustment_x.set_page_size(width)
-        self.adjustment_y.set_page_size(height)
-        self.add_change_code('size_changed')
-        self.last_cursor_scrolling_change = time.time()
-        self.update_scrollbars()
         self.content.queue_draw()
 
     def on_adjustment_changed(self, adjustment):
         self.scrolling_offset_y = self.adjustment_y.get_value()
         self.scrolling_offset_x = self.adjustment_x.get_value()
         self.add_change_code('scrolling_offset_changed')
-        self.last_cursor_scrolling_change = time.time()
-        self.update_scrollbars()
+
+        # The ScrolledWindow keeps the adjustment page size in sync with the
+        # visible viewport; treat a page-size change as a viewport resize so
+        # the preview can recompute zoom levels and layout.
+        visible_width = self.adjustment_x.get_page_size()
+        visible_height = self.adjustment_y.get_page_size()
+        if visible_width != self.width or visible_height != self.height:
+            self.width, self.height = visible_width, visible_height
+            self.add_change_code('size_changed')
+
         self.content.queue_draw()
 
     def on_primary_button_press(self, controller, n_press, x, y):
         if n_press != 1: return
         modifiers = Gtk.accelerator_get_default_mod_mask()
-
-        x = self.scrolling_offset_x + x
-        y = self.scrolling_offset_y + y
+        # ``x``/``y`` are already in canvas/document coordinates because the
+        # drawing area is canvas-sized inside the ScrolledWindow.
         self.add_change_code('primary_button_press', (x, y, controller.get_current_event_state() & modifiers))
 
     def on_primary_button_release(self, controller, n_press, x, y):
         if n_press != 1: return
         modifiers = Gtk.accelerator_get_default_mod_mask()
-
-        x = self.scrolling_offset_x + x
-        y = self.scrolling_offset_y + y
         self.add_change_code('primary_button_release', (x, y, controller.get_current_event_state() & modifiers))
 
     def on_secondary_button_press(self, controller, n_press, x, y):
         if n_press != 1: return
         modifiers = Gtk.accelerator_get_default_mod_mask()
-
-        x = self.scrolling_offset_x + x
-        y = self.scrolling_offset_y + y
         self.add_change_code('secondary_button_press', (x, y, controller.get_current_event_state() & modifiers))
 
     def on_enter(self, controller, x, y):
@@ -196,36 +190,5 @@ class ScrollingWidget(Observable):
     def set_cursor_position(self, x, y):
         if x != self.cursor_x or y != self.cursor_y:
             self.cursor_x, self.cursor_y = x, y
-            self.last_cursor_scrolling_change = time.time()
             self.add_change_code('hover_state_changed')
-            self.update_scrollbars()
             self.content.queue_draw()
-
-    def update_scrollbars(self):
-        self.scrollbar_x.set_visible(self.adjustment_x.get_upper() - self.adjustment_x.get_page_size() >= 1)
-        self.scrollbar_y.set_visible(self.adjustment_y.get_upper() - self.adjustment_y.get_page_size() >= 1)
-
-        if self.cursor_x != None and self.cursor_x > self.width - 24:
-            self.scrollbar_y.add_css_class('hovering')
-        else:
-            self.scrollbar_y.remove_css_class('hovering')
-            if self.last_cursor_scrolling_change < time.time() - 1.5:
-                self.scrollbar_x.add_css_class('hidden')
-                self.scrollbar_y.add_css_class('hidden')
-            else:
-                self.scrollbar_x.remove_css_class('hidden')
-                self.scrollbar_y.remove_css_class('hidden')
-
-        if self.cursor_y != None and self.cursor_y > self.height - 24:
-            self.scrollbar_x.add_css_class('hovering')
-        else:
-            self.scrollbar_x.remove_css_class('hovering')
-            if self.last_cursor_scrolling_change < time.time() - 1.5:
-                self.scrollbar_x.add_css_class('hidden')
-            else:
-                self.scrollbar_x.remove_css_class('hidden')
-
-        GObject.timeout_add(1750, self.update_scrollbars)
-        return False
-
-

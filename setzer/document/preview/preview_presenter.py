@@ -54,8 +54,11 @@ class PreviewPresenter(object):
 
     def on_layout_changed(self, preview):
         if self.preview.layout != None:
-            self.view.content.adjustment_x.set_upper(self.preview.layout.canvas_width)
-            self.view.content.adjustment_y.set_upper(self.preview.layout.canvas_height)
+            # Size the canvas-sized drawing area to the full PDF canvas; the
+            # Gtk.ScrolledWindow derives its adjustment uppers from this and
+            # provides the overlay scrollbars/viewport clipping.
+            self.view.drawing_area.set_content_width(self.preview.layout.canvas_width)
+            self.view.drawing_area.set_content_height(self.preview.layout.canvas_height)
             self.view.content.queue_draw()
 
     def on_rendered_pages_changed(self, page_renderer):
@@ -87,12 +90,19 @@ class PreviewPresenter(object):
 
         page_height = self.preview.layout.page_height
         page_gap = self.preview.layout.page_gap
-        margin = self.preview.layout.get_horizontal_margin(width)
+        # ``width``/``height`` are the full canvas size now; the visible
+        # viewport size is read from the ScrolledWindow adjustments.
+        visible_width = self.view.content.adjustment_x.get_page_size()
+        visible_height = self.view.content.adjustment_y.get_page_size()
+        margin = self.preview.layout.get_horizontal_margin(visible_width)
         scrolling_offset_x = self.view.content.scrolling_offset_x
         scrolling_offset_y = self.view.content.scrolling_offset_y
         first_page = int(scrolling_offset_y // (page_height + page_gap))
-        last_page = min(int((scrolling_offset_y + height + 1) // (page_height + page_gap)), self.preview.poppler_document.get_n_pages() - 1)
-        ctx.transform(cairo.Matrix(1, 0, 0, 1, margin - scrolling_offset_x, first_page * (page_height + page_gap) - scrolling_offset_y))
+        last_page = min(int((scrolling_offset_y + visible_height + 1) // (page_height + page_gap)), self.preview.poppler_document.get_n_pages() - 1)
+        # The ScrolledWindow already translates the context by
+        # ``(-scrolling_offset_x, -scrolling_offset_y)``, so pages are drawn at
+        # their absolute canvas coordinates.
+        ctx.transform(cairo.Matrix(1, 0, 0, 1, margin, first_page * (page_height + page_gap)))
 
         for page_number in range(first_page, last_page + 1):
             self.draw_page_background_and_outline(ctx)

@@ -140,7 +140,7 @@ class DocumentWizard(object):
         self.pages.append(LetterSettingsPage(self.current_values))
         self.pages.append(BeamerSettingsPage(self.current_values))
         self.pages.append(GeneralSettingsPage(self.current_values))
-        for page in self.pages: self.view.notebook.append_page(page.view)
+        for page in self.pages: self.view.page_stack.add_child(page.view)
 
         self.view.cancel_button.connect('clicked', self.on_cancel_button_clicked)
         self.view.create_button.connect('clicked', self.on_create_button_clicked)
@@ -186,7 +186,7 @@ class DocumentWizard(object):
     def goto_page(self, page_number):
         if self.current_page != page_number:
             self.current_page = page_number
-            self.view.notebook.set_current_page(page_number)
+            self.view.page_stack.set_visible_child(self.pages[page_number].view)
             self.view.subtitle_label.set_text(self.pages[page_number].view.headerbar_subtitle)
 
             self.pages[page_number].on_activation()

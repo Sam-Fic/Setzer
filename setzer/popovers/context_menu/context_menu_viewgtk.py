@@ -17,47 +17,82 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
-
-from setzer.popovers.helpers.standard_popover import StandardMenuViewBase
+from gi.repository import Gtk, Gio, GLib
 
 
-class ContextMenuView(StandardMenuViewBase):
+def _action_item(label, detailed_action, accel=None):
+    '''A Gio.MenuItem for an action, optionally with a parseable accel.
+
+    The ``accel`` attribute is rendered natively by Gtk.PopoverMenu as the
+    shortcut label on the right (e.g. ``<Control>z`` -> "Ctrl+Z").'''
+    item = Gio.MenuItem.new(label, detailed_action)
+    if accel is not None:
+        item.set_attribute_value('accel', GLib.Variant('s', accel))
+    return item
+
+
+class ContextMenuView(Gtk.PopoverMenu):
     '''Shortcutsbar "more" popover (the F12 context menu).
 
-    Migrated from the hand-built Popover(Gtk.Box) to StandardMenuViewBase,
-    which wraps a Gtk.Popover + Gtk.ListBox with native keyboard navigation.
-    Action items use add_action_button (returns the ListBoxRow so the
-    presenter can toggle visibility of comment/sync/separator as a unit).
+    Built from a ``Gio.Menu`` model on a native ``Gtk.PopoverMenu`` — the same
+    form as the hamburger menu — instead of the former hand-built
+    ListBox-in-popover. Action items use real GAction targets and parseable
+    accelerators. The LaTeX-only items (Toggle Comment / Show in Preview) live
+    in a section rebuilt on active-document changes. The Zoom controls are a
+    custom child widget (so the buttons can trigger actions without closing
+    the popover and the reset label can be updated dynamically).
     '''
 
     def __init__(self, popover_manager):
-        StandardMenuViewBase.__init__(self)
+        Gtk.PopoverMenu.__init__(self)
+        self.set_size_request(288, -1)
 
-        self.set_width(288)
+        self.latex_section = Gio.Menu()
+        self.set_menu_model(self._build_model())
+        self.add_child(self._build_zoom_widget(), 'zoom-controls')
 
-        self.add_action_button('main', _('Undo'), 'win.undo', shortcut=_('Ctrl') + '+Z')
-        self.add_action_button('main', _('Redo'), 'win.redo', shortcut=_('Shift') + '+' + _('Ctrl') + '+Z')
-        self.add_separator('main')
-        self.add_action_button('main', _('Cut'), 'win.cut', shortcut=_('Ctrl') + '+X')
-        self.add_action_button('main', _('Copy'), 'win.copy', shortcut=_('Ctrl') + '+C')
-        self.add_action_button('main', _('Paste'), 'win.paste', shortcut=_('Ctrl') + '+V')
-        self.add_action_button('main', _('Delete'), 'win.delete-selection')
-        self.add_separator('main')
-        self.add_action_button('main', _('Select All'), 'win.select-all', shortcut=_('Ctrl') + '+A')
-        self.add_separator('main')
-        self.comment_button = self.add_action_button('main', _('Toggle Comment'), 'win.toggle-comment', shortcut=_('Ctrl') + '+K')
-        self.sync_button = self.add_action_button('main', _('Show in Preview'), 'win.forward-sync')
-        self.latex_buttons_separator = self.add_separator('main')
+    def _build_model(self):
+        model = Gio.Menu()
 
-        # Zoom row: label on the left, zoom-out / reset / zoom-in on the right.
-        # These buttons trigger actions but must NOT close the popover (the user
-        # may zoom repeatedly), so they live in a non-activatable custom row.
+        section_edit = Gio.Menu()
+        section_edit.append_item(_action_item(_('Undo'), 'win.undo', '<Control>z'))
+        section_edit.append_item(_action_item(_('Redo'), 'win.redo', '<Control><Shift>z'))
+        model.append_section(None, section_edit)
+
+        section_clip = Gio.Menu()
+        section_clip.append_item(_action_item(_('Cut'), 'win.cut', '<Control>x'))
+        section_clip.append_item(_action_item(_('Copy'), 'win.copy', '<Control>c'))
+        section_clip.append_item(_action_item(_('Paste'), 'win.paste', '<Control>v'))
+        section_clip.append_item(_action_item(_('Delete'), 'win.delete-selection'))
+        model.append_section(None, section_clip)
+
+        section_select = Gio.Menu()
+        section_select.append_item(_action_item(_('Select All'), 'win.select-all', '<Control>a'))
+        model.append_section(None, section_select)
+
+        # LaTeX-only section: rebuilt via rebuild_latex_section().
+        model.append_section(None, self.latex_section)
+
+        # Zoom controls as a custom child row.
+        zoom_section = Gio.Menu()
+        zoom_item = Gio.MenuItem()
+        zoom_item.set_attribute_value('custom', GLib.Variant('s', 'zoom-controls'))
+        zoom_section.append_item(zoom_item)
+        model.append_section(None, zoom_section)
+
+        return model
+
+    def _build_zoom_widget(self):
         box = Gtk.CenterBox()
         box.set_orientation(Gtk.Orientation.HORIZONTAL)
+        box.set_margin_start(6)
+        box.set_margin_end(6)
+        box.set_margin_top(6)
+        box.set_margin_bottom(6)
+
         zoom_label = Gtk.Label(label=_('Zoom'))
-        zoom_label.set_margin_start(12)
         box.set_start_widget(zoom_label)
+
         inner_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
         button_zoom_out = Gtk.Button()
@@ -79,4 +114,11 @@ class ContextMenuView(StandardMenuViewBase):
         inner_box.append(button_zoom_in)
 
         box.set_end_widget(inner_box)
-        self.add_widget(box)
+        return box
+
+    def rebuild_latex_section(self, visible):
+        '''Populate (or clear) the LaTeX-only section for the active document.'''
+        self.latex_section.remove_all()
+        if visible:
+            self.latex_section.append_item(_action_item(_('Toggle Comment'), 'win.toggle-comment', '<Control>k'))
+            self.latex_section.append(_('Show in Preview'), 'win.forward-sync')

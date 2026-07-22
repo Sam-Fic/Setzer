@@ -6,39 +6,30 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
 from gi.repository import GLib
 
-from setzer.popovers.helpers.standard_popover import StandardMenuViewBase
+from setzer.popovers.helpers.gio_menu_builder import GioMenuBuilder
 
 
-class BibliographyMenu(object):
+class BibliographyMenu(GioMenuBuilder):
 
     def __init__(self, popover_manager=None):
-        self.view = BibliographyMenuView()
-
-
-class BibliographyMenuView(StandardMenuViewBase):
-
-    def __init__(self):
-        StandardMenuViewBase.__init__(self)
-
-        self.set_width(288)
+        GioMenuBuilder.__init__(self)
 
         self.add_action_button('main', _('Include BibTeX File') + '...', 'win.include-bibtex-file')
         self.add_action_button('main', _('Include \'natbib\' Package'), 'win.add-packages', GLib.Variant('as', ['natbib']))
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
+        self.add_separator()
         self.add_insert_symbol_item('main', _('Citation'), ['\\cite{•}'])
         self.add_insert_symbol_item('main', _('Citation with Page Number'), ['\\cite[•]{•}'])
         self.add_menu_button(_('Natbib Citations'), 'natbib_citations')
@@ -52,10 +43,8 @@ class BibliographyMenuView(StandardMenuViewBase):
         self.add_insert_symbol_item('natbib_citations', _('Detailed with Brackets'), ['\\citep*{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Alternative 1'), ['\\citealt{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Alternative 2'), ['\\citealp{•}'])
-        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), 'natbib_citations')
+        self.add_separator('natbib_citations')
         self.add_insert_symbol_item('natbib_citations', _('Cite Author'), ['\\citeauthor{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Cite Author Detailed'), ['\\citeauthor*{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Cite Year'), ['\\citeyear{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Cite Year with Brackets'), ['\\citeyearpar{•}'])
-
-

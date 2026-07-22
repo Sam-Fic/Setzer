@@ -6,18 +6,20 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
 from gi.repository import Gtk
+from gi.repository import Adw
 from gi.repository import GLib
 
 from setzer.dialogs.document_wizard.pages.page import Page, PageView
@@ -34,52 +36,26 @@ class GeneralSettingsPage(Page):
         self.view = GeneralSettingsPageView()
 
     def observe_view(self):
-        def text_deleted(buffer, position, n_chars, field_name):
-            self.current_values[field_name] = buffer.get_text()
+        def text_changed(entry, field_name):
+            self.current_values[field_name] = entry.get_text()
 
-        def text_inserted(buffer, position, chars, n_chars, field_name):
-            self.current_values[field_name] = buffer.get_text()
-
-        def language_toggled(button):
-            if button.get_active():
-                for btn in self.view.language_buttons:
-                    if btn is not button:
-                        btn.set_active(False)
-                    else:
-                        self.update_languages_list(re.search(r'\((.*?)\)', btn.get_label()).group(1))
-
-        def language_changed(combobox):
-            code = combobox.get_active_id()
-            if code != 0:
+        def language_changed(combo, pspec):
+            selected = combo.get_selected()
+            if selected != Gtk.INVALID_LIST_POSITION:
+                code = self.view.language_codes[selected]
                 self.update_languages_list(code)
 
-        def option_toggled(button, package_name):
-            self.current_values['packages'][package_name] = button.get_active()
+        def option_toggled(row, pspec, package_name):
+            self.current_values['packages'][package_name] = row.get_active()
 
-        def package_hover_start(button, x, y, package_name):
-            markup = self.view.packages_tooltip_data[package_name]
-            self.view.packages_tooltip.set_markup(markup)
+        self.view.title_entry.connect('changed', text_changed, 'title')
+        self.view.author_entry.connect('changed', text_changed, 'author')
+        self.view.date_entry.connect('changed', text_changed, 'date')
 
-        def package_hover_end(button, package_name):
-            self.view.packages_tooltip.set_markup(' ')
+        self.view.language_combo.connect('notify::selected', language_changed)
 
-        self.view.title_entry.get_buffer().connect('deleted-text', text_deleted, 'title')
-        self.view.title_entry.get_buffer().connect('inserted-text', text_inserted, 'title')
-        self.view.author_entry.get_buffer().connect('deleted-text', text_deleted, 'author')
-        self.view.author_entry.get_buffer().connect('inserted-text', text_inserted, 'author')
-        self.view.date_entry.get_buffer().connect('deleted-text', text_deleted, 'date')
-        self.view.date_entry.get_buffer().connect('inserted-text', text_inserted, 'date')
-
-        for btn in self.view.language_buttons:
-            btn.connect('toggled', language_toggled)
-        self.view.language_combobox.connect('changed', language_changed)
-
-        for name, checkbox in self.view.option_packages.items():
-            checkbox.connect('toggled', option_toggled, name)
-            motion_controller = Gtk.EventControllerMotion()
-            motion_controller.connect('enter', package_hover_start, name)
-            motion_controller.connect('leave', package_hover_end, name)
-            checkbox.add_controller(motion_controller)
+        for name, row in self.view.option_packages.items():
+            row.connect('notify::active', option_toggled, name)
 
     def load_presets(self, presets):
         try:
@@ -108,21 +84,17 @@ class GeneralSettingsPage(Page):
         self.view.title_entry.grab_focus()
 
     def add_languages_list(self, langs):
-        self.view.language_combobox.remove_all()
-        for index, (code, language) in enumerate(langs.items()):
-            label = '{} ({})'.format(language, code)
-            if index < len(self.view.language_buttons):
-                self.view.language_buttons[index].set_label(label)
-            else:
-                self.view.language_combobox.append(code, label)
-        self.view.language_combobox.prepend_text(_('Others…'))
-        self.view.language_combobox.set_active(0)
-        self.view.language_buttons[0].set_active(True)
+        model = Gtk.StringList()
+        self.view.language_codes = list(langs.keys())
+        for code in self.view.language_codes:
+            model.append('{} ({})'.format(langs[code], code))
+        self.view.language_combo.set_model(model)
+        self.view.language_combo.set_selected(0)
 
     def update_languages_list(self, lang):
         dictionary = self.current_values['languages']
 
-        if lang in dictionary:
+        if lang in dictionary and next(iter(dictionary)) != lang:
             value = dictionary.pop(lang)
             dictionary = {lang: value, **dictionary}
 
@@ -138,129 +110,87 @@ class GeneralSettingsPageView(PageView):
         self.header.set_text(_('General document settings'))
         self.headerbar_subtitle = _('Step') + ' 3: ' + _('General document settings')
 
-        self.subheader_title = Gtk.Label(label=_('Title'))
-        self.subheader_title.add_css_class('document-wizard-subheader')
-        self.subheader_title.set_xalign(0)
-        self.title_entry = Gtk.Entry()
-        self.title_entry.set_margin_end(280)
-        self.subheader_author = Gtk.Label(label=_('Author'))
-        self.subheader_author.add_css_class('document-wizard-subheader')
-        self.subheader_author.set_xalign(0)
-        self.author_entry = Gtk.Entry()
-        self.author_entry.set_margin_end(100)
-        self.author_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.author_box.append(self.subheader_author)
-        self.author_box.append(self.author_entry)
-        self.author_box.set_size_request(348, -1)
-        self.subheader_date = Gtk.Label(label=_('Date'))
-        self.subheader_date.add_css_class('document-wizard-subheader')
-        self.subheader_date.set_xalign(0)
-        self.date_entry = Gtk.Entry()
-        self.date_entry.set_margin_end(100)
-        self.date_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.date_box.append(self.subheader_date)
-        self.date_box.append(self.date_entry)
-        self.date_box.set_size_request(348, -1)
-        self.subheader_language = Gtk.Label(label=_('Language'))
-        self.subheader_language.add_css_class('document-wizard-subheader')
-        self.subheader_language.set_xalign(0)
-        self.subheader_language.set_margin_top(18)
+        # Package descriptions (instance-level so gettext _() is resolved at
+        # runtime, after gettext.install has run).
+        self.package_descriptions = {
+            'ams': _('<b>AMS packages:</b> provide mathematical symbols, math-related environments, …') + ' (' + _('recommended') + ')',
+            'textcomp': '<b>textcomp:</b> ' + _('contains symbols to be used in textmode.') + ' (' + _('recommended') + ')',
+            'graphicx': '<b>graphicx:</b> ' + _('include graphics in your document.') + ' (' + _('recommended') + ')',
+            'color': '<b>color:</b> ' + _('foreground and background color.') + ' (' + _('recommended') + ')',
+            'xcolor': '<b>xcolor:</b> ' + _('enables colored text.') + ' (' + _('recommended') + ')',
+            'url': '<b>url:</b> ' + _('type urls with the \\url{..} command without escaping them.') + ' (' + _('recommended') + ')',
+            'hyperref': '<b>hyperref:</b> ' + _('create hyperlinks within your document.'),
+            'theorem': '<b>theorem:</b> ' + _('define theorem environments (like "definition", "lemma", …) with custom styling.'),
+            'listings': '<b>listings:</b> ' + _('provides the \\listing environment for embedding programming code.'),
+            'glossaries': '<b>glossaries:</b> ' + _('create a glossary for your document.'),
+            'parskip': '<b>parskip:</b> ' + _('paragraphs without indentation.'),
+        }
 
-        self.language_buttons = []
-        self.language_buttons.append(Gtk.ToggleButton())
-        self.language_buttons.append(Gtk.ToggleButton())
-        self.language_combobox = Gtk.ComboBoxText()
+        # Document properties ------------------------------------------------
+        self.group_document_properties = Adw.PreferencesGroup()
+        self.group_document_properties.set_title(_('Document properties'))
 
-        self.language_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.language_box.add_css_class('linked')
-        self.language_box.append(self.language_buttons[0])
-        self.language_box.append(self.language_buttons[1])
-        self.language_box.append(self.language_combobox)
+        self.title_entry = Adw.EntryRow()
+        self.title_entry.set_title(_('Title'))
+        self.author_entry = Adw.EntryRow()
+        self.author_entry.set_title(_('Author'))
+        self.date_entry = Adw.EntryRow()
+        self.date_entry.set_title(_('Date'))
+        self.group_document_properties.add(self.title_entry)
+        self.group_document_properties.add(self.author_entry)
+        self.group_document_properties.add(self.date_entry)
 
-        self.language_description = Gtk.Label(label=_('The main language for this document. This is used to apply rules for hyphenation and other purposes.'))
-        self.language_description.set_xalign(0)
-        self.language_description.set_margin_top(6)
-        self.language_description.add_css_class('document-wizard-desc')
-        self.document_properties_hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.document_properties_hbox.set_margin_top(18)
-        self.document_properties_hbox.append(self.author_box)
-        self.document_properties_hbox.append(self.date_box)
+        # Language -----------------------------------------------------------
+        self.group_language = Adw.PreferencesGroup()
+        self.group_language.set_title(_('Language'))
+        self.group_language.set_description(_('The main language for this document. This is used to apply rules for hyphenation and other purposes.'))
+        self.language_combo = Adw.ComboRow()
+        self.language_combo.set_title(_('Language'))
+        self.language_combo.set_model(Gtk.StringList())
+        self.language_codes = list()
+        self.group_language.add(self.language_combo)
 
-        self.subheader_packages = Gtk.Label(label=_('Packages'))
-        self.subheader_packages.add_css_class('document-wizard-subheader')
-        self.subheader_packages.set_margin_top(18)
-        self.subheader_packages.set_xalign(0)
-        
+        # Packages -----------------------------------------------------------
         self.option_packages = dict()
-        self.option_packages['ams'] = Gtk.CheckButton(label=_('AMS math packages'))
-        self.option_packages['textcomp'] = Gtk.CheckButton(label='textcomp')
-        self.option_packages['graphicx'] = Gtk.CheckButton(label='graphicx')
-        self.option_packages['color'] = Gtk.CheckButton(label='color')
-        self.option_packages['xcolor'] = Gtk.CheckButton(label='xcolor')
-        self.option_packages['url'] = Gtk.CheckButton(label='url')
-        self.option_packages['hyperref'] = Gtk.CheckButton(label='hyperref')
-        self.option_packages['theorem'] = Gtk.CheckButton(label='theorem')
-        self.option_packages['listings'] = Gtk.CheckButton(label='listings')
-        self.option_packages['glossaries'] = Gtk.CheckButton(label='glossaries')
-        self.option_packages['parskip'] = Gtk.CheckButton(label='parskip')
+        self.option_packages['ams'] = self._create_package_row(_('AMS math packages'), 'ams')
+        self.option_packages['textcomp'] = self._create_package_row('textcomp', 'textcomp')
+        self.option_packages['graphicx'] = self._create_package_row('graphicx', 'graphicx')
+        self.option_packages['color'] = self._create_package_row('color', 'color')
+        self.option_packages['xcolor'] = self._create_package_row('xcolor', 'xcolor')
+        self.option_packages['url'] = self._create_package_row('url', 'url')
+        self.option_packages['hyperref'] = self._create_package_row('hyperref', 'hyperref')
+        self.option_packages['theorem'] = self._create_package_row('theorem', 'theorem')
+        self.option_packages['listings'] = self._create_package_row('listings', 'listings')
+        self.option_packages['glossaries'] = self._create_package_row('glossaries', 'glossaries')
+        self.option_packages['parskip'] = self._create_package_row('parskip', 'parskip')
 
-        self.packages_leftbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.packages_leftbox.set_size_request(348, -1)
-        self.packages_leftbox.append(self.option_packages['ams'])
-        self.packages_leftbox.append(self.option_packages['textcomp'])
-        self.packages_leftbox.append(self.option_packages['graphicx'])
-        self.packages_leftbox.append(self.option_packages['color'])
-        self.packages_leftbox.append(self.option_packages['xcolor'])
-        self.packages_leftbox.append(self.option_packages['url'])
+        self.group_packages_left = Adw.PreferencesGroup()
+        self.group_packages_left.set_title(_('Packages'))
+        for name in ['ams', 'textcomp', 'graphicx', 'color', 'xcolor', 'url']:
+            self.group_packages_left.add(self.option_packages[name])
 
-        self.packages_rightbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.packages_rightbox.set_size_request(348, -1)
-        self.packages_rightbox.append(self.option_packages['hyperref'])
-        self.packages_rightbox.append(self.option_packages['theorem'])
-        self.packages_rightbox.append(self.option_packages['listings'])
-        self.packages_rightbox.append(self.option_packages['glossaries'])
-        self.packages_rightbox.append(self.option_packages['parskip'])
+        self.group_packages_right = Adw.PreferencesGroup()
+        for name in ['hyperref', 'theorem', 'listings', 'glossaries', 'parskip']:
+            self.group_packages_right.add(self.option_packages[name])
 
-        self.packages_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.packages_box.add_css_class('packages')
-        self.packages_box.append(self.packages_leftbox)
-        self.packages_box.append(self.packages_rightbox)
+        # Layout -------------------------------------------------------------
+        self.top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
+        self.top_row.append(self.group_document_properties)
+        self.top_row.append(self.group_language)
 
-        self.packages_tooltip = Gtk.Label(label='')
-        self.packages_tooltip_data = dict()
-        self.packages_tooltip_data['ams'] = _('<b>AMS packages:</b> provide mathematical symbols, math-related environments, …') + ' (' + _('recommended') + ')'
-        self.packages_tooltip_data['textcomp'] = '<b>textcomp:</b> ' + _('contains symbols to be used in textmode.') + ' (' + _('recommended') + ')'
-        self.packages_tooltip_data['graphicx'] = '<b>graphicx:</b> ' + _('include graphics in your document.') + ' (' + _('recommended') + ')'
-        self.packages_tooltip_data['color'] = '<b>color:</b> ' + _('foreground and background color.') + ' (' + _('recommended') + ')'
-        self.packages_tooltip_data['xcolor'] = '<b>xcolor:</b> ' + _('enables colored text.') + ' (' + _('recommended') + ')'
-        self.packages_tooltip_data['url'] = '<b>url:</b> ' + _('type urls with the \\url{..} command without escaping them.') + ' (' + _('recommended') + ')'
-        self.packages_tooltip_data['hyperref'] = '<b>hyperref:</b> ' + _('create hyperlinks within your document.')
-        self.packages_tooltip_data['theorem'] = '<b>theorem:</b> ' + _('define theorem environments (like "definition", "lemma", …) with custom styling.')
-        self.packages_tooltip_data['listings'] = '<b>listings:</b> ' + _('provides the \\listing environment for embedding programming code.')
-        self.packages_tooltip_data['glossaries'] = '<b>glossaries:</b> ' + _('create a glossary for your document.')
-        self.packages_tooltip_data['parskip'] = '<b>parskip:</b> ' + _('paragraphs without indentation.')
-        self.packages_tooltip.set_markup(' ')
-        self.packages_tooltip.set_xalign(0)
-        self.packages_tooltip.set_wrap(True)
-        self.packages_tooltip.set_margin_top(12)
-        self.packages_tooltip.set_margin_end(18)
-        self.packages_tooltip.set_size_request(714, -1)
+        self.packages_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
+        self.packages_row.append(self.group_packages_left)
+        self.packages_row.append(self.group_packages_right)
 
-        self.form = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.form.append(self.subheader_title)
-        self.form.append(self.title_entry)
-        self.form.append(self.document_properties_hbox)
-        self.form.append(self.subheader_language)
-        self.form.append(self.language_box)
-        self.form.append(self.language_description)
-        self.form.append(self.subheader_packages)
-        self.form.append(self.packages_box)
-        self.form.append(self.packages_tooltip)
-
-        self.content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.content.append(self.form)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        self.content.append(self.top_row)
+        self.content.append(self.packages_row)
 
         self.append(self.header)
         self.append(self.content)
 
-
+    def _create_package_row(self, label, name):
+        row = Adw.SwitchRow()
+        row.set_title(label)
+        row.set_tooltip_markup(self.package_descriptions[name])
+        return row

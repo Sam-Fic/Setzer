@@ -6,27 +6,44 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
-from gi.repository import Graphene
+from gi.repository import Gtk, GObject, Gio
 from gi.repository import Pango
 
-from setzer.app.service_locator import ServiceLocator
-from setzer.app.color_manager import ColorManager
-from setzer.helpers.timer import timer
-import setzer.helpers.drawing as drawing_helper
-
 import os.path
+
+
+# Map build-log item type to a symbolic icon name.
+ICON_MAP = {
+    'Error': 'dialog-error-symbolic',
+    'Warning': 'dialog-warning-symbolic',
+    'Badbox': 'own-badbox-symbolic',
+}
+
+
+class BuildLogItem(GObject.Object):
+    '''A single build-log entry exposed to the Gtk.ListStore.
+
+    Plain Python attributes are read by the factory's ``bind`` handler; the
+    GObject base is required so instances can live in a ``Gio.ListStore``.
+    '''
+
+    def __init__(self, item_type, filename, line_number, description):
+        GObject.Object.__init__(self)
+        self.item_type = item_type
+        self.filename = filename
+        self.line_number = line_number
+        self.description = description
 
 
 class BuildLogView(Gtk.Box):
@@ -35,7 +52,7 @@ class BuildLogView(Gtk.Box):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
 
-        self.list = BuildLogList(self)
+        self.list = BuildLogList()
 
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_vexpand(True)
@@ -50,7 +67,7 @@ class BuildLogView(Gtk.Box):
         self.header_label.set_size_request(300, -1)
         self.header_label.set_xalign(0)
         self.header_label.set_margin_start(0)
-        self.header_label.set_hexpand(True)        
+        self.header_label.set_hexpand(True)
 
         self.header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.header.append(self.header_label)
@@ -61,94 +78,76 @@ class BuildLogView(Gtk.Box):
         self.set_size_request(200, 200)
 
 
-class BuildLogList(Gtk.Widget):
+class BuildLogList(Gtk.ListView):
+    '''Native Gtk.ListView replacement for the former hand-drawn build log.
 
-    def __init__(self, parent):
-        Gtk.Widget.__init__(self)
-        self.parent = parent
-        self.icons = list()
+    Each row is a horizontal Box: [icon] [type] [file] [line] [description].
+    Hover highlighting, scrolling and keyboard navigation come from the
+    underlying Gtk.ListView; activation (single click) opens the source file
+    at the reported line (wired in BuildLogController).
+    '''
 
-        self.items = []
-        self.hover_item = None
-        self.offset_start = 0
-        self.offset_end = 0
+    def __init__(self):
+        self.list_store = Gio.ListStore.new(BuildLogItem)
+        self.selection = Gtk.SingleSelection(model=self.list_store)
+        self.selection.set_can_unselect(True)
+        Gtk.ListView.__init__(self, model=self.selection)
+        self.set_single_click_activate(True)
+        self.set_can_focus(False)
 
-        self.font = self.get_pango_context().get_font_description()
-        self.font_size = self.font.get_size() / Pango.SCALE
+        self.factory = Gtk.SignalListItemFactory()
+        self.factory.connect('setup', self.on_setup)
+        self.factory.connect('bind', self.on_bind)
+        self.set_factory(self.factory)
 
-        self.layouts = list()
-        for i in range(4):
-            layout = Pango.Layout(self.get_pango_context())
-            layout.set_font_description(self.font)
-            layout.set_spacing(8 * Pango.SCALE)
-            layout.set_text('\n')
-            self.layouts.append(layout)
+    def on_setup(self, factory, list_item):
+        row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        row.set_margin_start(12)
+        row.set_margin_end(12)
+        row.set_margin_top(3)
+        row.set_margin_bottom(3)
 
-        self.line_height = self.layouts[0].get_extents()[0].height / Pango.SCALE
+        icon = Gtk.Image()
+        icon.set_pixel_size(16)
+        row.append(icon)
 
-    def do_snapshot(self, snapshot):
-        self.offset_start = self.parent.scrolled_window.get_vadjustment().get_value()
-        self.offset_end = self.offset_start + self.parent.scrolled_window.get_vadjustment().get_page_size()
+        type_label = Gtk.Label()
+        type_label.set_xalign(0)
+        type_label.set_width_chars(8)
+        row.append(type_label)
 
-        self.setup_icons()
+        file_label = Gtk.Label()
+        file_label.set_xalign(0)
+        file_label.set_width_chars(18)
+        file_label.set_ellipsize(Pango.EllipsizeMode.START)
+        row.append(file_label)
 
-        fg_color = ColorManager.get_ui_color('view_fg_color')
-        bg_color = ColorManager.get_ui_color('view_bg_color')
-        hover_color = ColorManager.get_ui_color('view_hover_color')
+        line_label = Gtk.Label()
+        line_label.set_xalign(0)
+        line_label.set_width_chars(8)
+        row.append(line_label)
 
-        snapshot.append_color(bg_color, Graphene.Rect().init(0, self.offset_start, self.get_allocated_width(), self.offset_end + 2000))
-        if self.hover_item != None:
-            snapshot.append_color(hover_color, Graphene.Rect().init(0, self.hover_item * self.line_height, self.get_allocated_width(), self.line_height))
+        desc_label = Gtk.Label()
+        desc_label.set_xalign(0)
+        desc_label.set_hexpand(True)
+        desc_label.set_ellipsize(Pango.EllipsizeMode.END)
+        row.append(desc_label)
 
-        snapshot.translate(Graphene.Point().init(40, 3))
-        snapshot.append_layout(self.layouts[0], fg_color)
-        snapshot.translate(Graphene.Point().init(76, 0))
-        snapshot.append_layout(self.layouts[1], fg_color)
-        snapshot.translate(Graphene.Point().init(138, 0))
-        snapshot.append_layout(self.layouts[2], fg_color)
-        snapshot.translate(Graphene.Point().init(76, 0))
-        snapshot.append_layout(self.layouts[3], fg_color)
+        list_item.set_child(row)
+        row.icon = icon
+        row.type_label = type_label
+        row.file_label = file_label
+        row.line_label = line_label
+        row.desc_label = desc_label
 
-        snapshot.translate(Graphene.Point().init(- (40 + 76 + 138 + 76), 0))
-        snapshot.translate(Graphene.Point().init(12, 2))
-        for i, item in enumerate(self.items):
-            self.icons[item[0]].snapshot_symbolic(snapshot, 16, 16, [fg_color])
-            snapshot.translate(Graphene.Point().init(0, self.line_height))
-
-    def generate_layouts(self):
-        first_item = min(max(int(self.offset_start // self.line_height) - 5, 0), len(self.items))
-        last_item = min(int(self.offset_end // self.line_height) + 7, len(self.items))
-
-        type_text = ''
-        file_text = ''
-        line_text = ''
-        desc_text = ''
-        for i, item in enumerate(self.items):
-            type_text += item[0] + '\n'
-            file_text += os.path.basename(item[2]) + '\n'
-            line_text += _('Line {number}').format(number=str(item[3])) + "\n" if item[3] >= 0 else '' + '\n'
-            desc_text += item[4] + '\n'
-
-        self.layouts[0].set_text(type_text)
-        self.layouts[0].set_width(70 * Pango.SCALE)
-
-        self.layouts[1].set_text(file_text)
-        self.layouts[1].set_ellipsize(Pango.EllipsizeMode.START)
-        self.layouts[1].set_width(132 * Pango.SCALE)
-
-        self.layouts[2].set_text(line_text)
-        self.layouts[2].set_ellipsize(Pango.EllipsizeMode.NONE)
-        self.layouts[2].set_width(70 * Pango.SCALE)
-
-        self.layouts[3].set_text(desc_text)
-        self.layouts[3].set_width(-1)
-
-    def setup_icons(self, widget=None):
-        icon_theme = Gtk.IconTheme.get_for_display(ServiceLocator.get_main_window().get_display())
-
-        self.icons = dict()
-        for icon_type, icon_name in [('Error', 'dialog-error-symbolic'), ('Warning', 'dialog-warning-symbolic'), ('Badbox', 'own-badbox-symbolic')]:
-            icon = icon_theme.lookup_icon(icon_name, None, 16, self.get_scale_factor(), Gtk.TextDirection.LTR, 0)
-            self.icons[icon_type] = icon
-
-
+    def on_bind(self, factory, list_item):
+        item = list_item.get_item()
+        row = list_item.get_child()
+        row.icon.set_from_icon_name(ICON_MAP.get(item.item_type, 'dialog-warning-symbolic'))
+        row.type_label.set_label(item.item_type)
+        row.file_label.set_label(os.path.basename(item.filename) if item.filename else '')
+        if item.line_number >= 0:
+            row.line_label.set_label(_('Line {number}').format(number=item.line_number))
+        else:
+            row.line_label.set_label('')
+        row.desc_label.set_label(item.description)

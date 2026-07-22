@@ -16,32 +16,18 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
-gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
+gi.require_version('Adw', '1')
+from gi.repository import Adw
 
 
-class WelcomeScreenView(Gtk.Box):
+def WelcomeScreenView():
     '''Welcome screen shown when no document is open.
 
-    Replaces the former Gtk.Overlay + DrawingArea rotating-text animation
-    (decorative lorem ipsum rendered at alpha=0.065, effectively invisible)
-    with a simple centered vertical box using standard title/subtitle
-    libadwaita text style classes.
-    '''
-
-    def __init__(self):
-        Gtk.Box.__init__(self)
-        self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.set_halign(Gtk.Align.CENTER)
-        self.set_valign(Gtk.Align.CENTER)
-        self.set_spacing(12)
-
-        self.header = Gtk.Label(label=_('Write beautiful LaTeX documents with ease!'))
-        self.header.set_wrap(True)
-        self.header.add_css_class('title')
-        self.append(self.header)
-
-        self.description = Gtk.Label(label=_('Click the open or create buttons in the headerbar above to start editing.'))
-        self.description.set_wrap(True)
-        self.description.add_css_class('subtitle')
-        self.append(self.description)
+    Returns a configured Adw.StatusPage (icon + title + description).
+    Adw.StatusPage 是 final 类型，无法被子类化，故以工厂函数返回实例，
+    替代原来的手绘 Gtk.Box + Gtk.Label 居中布局。'''
+    page = Adw.StatusPage()
+    page.set_icon_name('text-x-tex-symbolic')
+    page.set_title(_('Write beautiful LaTeX documents with ease!'))
+    page.set_description(_('Click the open or create buttons in the headerbar above to start editing.'))
+    return page

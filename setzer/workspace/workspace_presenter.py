@@ -43,6 +43,7 @@ class WorkspacePresenter(object):
         self.main_window.mode_stack.set_visible_child_name('welcome_screen')
         self.update_font()
         self.update_colors()
+        self._build_log_position = None
         self.setup_paneds()
 
     def on_settings_changed(self, settings, parameter):
@@ -55,17 +56,17 @@ class WorkspacePresenter(object):
             self.update_colors()
 
     def on_new_document(self, workspace, document):
-        self.main_window.document_stack.append_page(document.view)
+        self.main_window.document_stack.add_child(document.view)
 
     def on_document_removed(self, workspace, document):
-        self.main_window.document_stack.remove_page(self.main_window.document_stack.page_num(document.view))
+        self.main_window.document_stack.remove(document.view)
 
         if self.workspace.active_document == None:
             self.main_window.mode_stack.set_visible_child_name('welcome_screen')
 
     def on_new_active_document(self, workspace, document):
         self.main_window.mode_stack.set_visible_child_name('documents')
-        self.main_window.document_stack.set_current_page(self.main_window.document_stack.page_num(document.view))
+        self.main_window.document_stack.set_visible_child(document.view)
         self.focus_active_document()
 
         if document.is_latex_document():
@@ -115,19 +116,18 @@ class WorkspacePresenter(object):
     def update_sidebar_visibility(self, animate=True):
         sidebar_visible_for_latex_docs = self.workspace.show_symbols or self.workspace.show_document_structure
         show_sidebar = self.workspace.get_active_latex_document() and sidebar_visible_for_latex_docs
-        self.main_window.sidebar_paned.set_show_widget(show_sidebar)
-        self.main_window.sidebar_paned.animate(animate)
+        self.main_window.sidebar_split.set_show_sidebar(show_sidebar)
 
     def update_build_log_visibility(self, animate=True):
         show_build_log = self.workspace.get_root_or_active_latex_document() and self.workspace.show_build_log
-        self.main_window.build_log_paned.set_show_widget(show_build_log)
-        self.main_window.build_log_paned.animate(animate)
+        self.main_window.build_log.set_visible(show_build_log)
+        if show_build_log and self._build_log_position is not None:
+            self.main_window.build_log_paned.set_position(self._build_log_position)
 
     def update_preview_help_visibility(self, animate=True):
         preview_help_visible_for_latex_docs = self.workspace.show_preview or self.workspace.show_help
         show_preview_help = self.workspace.get_root_or_active_latex_document() and preview_help_visible_for_latex_docs
-        self.main_window.preview_paned.set_show_widget(show_preview_help)
-        self.main_window.preview_paned.animate(animate)
+        self.main_window.preview_help_stack.set_visible(show_preview_help)
 
     def focus_active_document(self):
         active_document = self.workspace.get_active_document()
@@ -154,13 +154,19 @@ class WorkspacePresenter(object):
         show_preview_help = self.workspace.get_root_or_active_latex_document() and preview_help_visible_for_latex_docs
         show_build_log = self.workspace.get_root_or_active_latex_document() and self.workspace.get_show_build_log()
 
-        sidebar_position = self.workspace.settings.get_value('window_state', 'sidebar_paned_position')
+        sidebar_fraction = self.workspace.settings.get_value('window_state', 'sidebar_width_fraction')
         preview_position = self.workspace.settings.get_value('window_state', 'preview_paned_position')
         build_log_position = self.workspace.settings.get_value('window_state', 'build_log_paned_position')
 
-        if sidebar_position in [None, -1]: self.main_window.sidebar_paned.set_start_on_first_show()
-        if preview_position in [None, -1]: self.main_window.preview_paned.set_center_on_first_show()
-        if build_log_position in [None, -1]: self.main_window.build_log_paned.set_end_on_first_show()
+        # sidebar 宽度（Adw.OverlaySplitView 按 fraction）；preview/build_log 仍像素 position
+        if isinstance(sidebar_fraction, (int, float)) and 0.0 < sidebar_fraction <= 1.0:
+            self.main_window.sidebar_split.set_sidebar_width_fraction(sidebar_fraction)
+        if isinstance(preview_position, int) and preview_position > 0:
+            self.main_window.preview_paned.set_position(preview_position)
+        # build_log 分隔条（像素，纵向 Gtk.Paned）
+        if isinstance(build_log_position, int) and build_log_position > 0:
+            self._build_log_position = build_log_position
+            self.main_window.build_log_paned.set_position(build_log_position)
 
         if self.workspace.show_symbols: self.main_window.sidebar.set_visible_child_name('symbols')
         elif self.workspace.show_document_structure: self.main_window.sidebar.set_visible_child_name('document_structure')
@@ -168,17 +174,30 @@ class WorkspacePresenter(object):
         if self.workspace.show_preview: self.main_window.preview_help_stack.set_visible_child_name('preview')
         elif self.workspace.show_help: self.main_window.preview_help_stack.set_visible_child_name('help')
 
-        self.main_window.sidebar_paned.first_set_show_widget(show_sidebar)
-        self.main_window.preview_paned.first_set_show_widget(show_preview_help)
-        self.main_window.build_log_paned.first_set_show_widget(show_build_log)
+        # 初始显隐（首次无动画）
+        self.main_window.build_log.set_visible(show_build_log)
+        self.main_window.sidebar_split.set_show_sidebar(show_sidebar)
+        self.main_window.preview_help_stack.set_visible(show_preview_help)
 
-        self.main_window.sidebar_paned.set_target_position(sidebar_position)
-        self.main_window.preview_paned.set_target_position(preview_position)
-        self.main_window.build_log_paned.set_target_position(build_log_position)
+        # 拖动分隔条时实时持久化到 settings（仅更新内存 dict，pickle 在关闭时落盘）
+        self.main_window.sidebar_split.connect('notify::sidebar-width-fraction', self.on_sidebar_width_changed)
+        self.main_window.preview_paned.connect('notify::position', self.on_preview_width_changed)
+        self.main_window.build_log_paned.connect('notify::position', self.on_build_log_position_changed)
 
         self.main_window.headerbar.symbols_toggle.set_active(self.workspace.show_symbols)
         self.main_window.headerbar.document_structure_toggle.set_active(self.workspace.show_document_structure)
         self.main_window.headerbar.preview_toggle.set_active(self.workspace.show_preview)
         self.main_window.headerbar.help_toggle.set_active(self.workspace.show_help)
+
+    def on_sidebar_width_changed(self, split, pspec):
+        self.workspace.settings.set_value('window_state', 'sidebar_width_fraction', split.get_sidebar_width_fraction())
+
+    def on_preview_width_changed(self, paned, pspec):
+        self.workspace.settings.set_value('window_state', 'preview_paned_position', paned.get_position())
+
+    def on_build_log_position_changed(self, paned, pspec):
+        if self.main_window.build_log.get_visible():
+            self._build_log_position = paned.get_position()
+            self.workspace.settings.set_value('window_state', 'build_log_paned_position', paned.get_position())
 
 

@@ -19,17 +19,18 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gdk, Gtk
 
-from setzer.popovers.helpers.standard_popover import StandardMenuPopover
+from setzer.popovers.helpers.adw_popover_menu import AdwPopoverMenu
 from setzer.popovers.popover_manager import PopoverManager
 
 
 class ContextMenu(object):
     '''Workspace right-click (secondary-button) context menu for documents.
 
-    Migrated from MenuBuilder.create_menu() (PopoverMenu) to StandardMenuPopover.
-    Action items use add_item (native ListBox keyboard navigation + auto-close
-    via row-activated). The LaTeX-only items (comment/sync/separator) are
-    toggled as whole rows via set_visible.
+    Built on AdwPopoverMenu (Gtk.Popover + Gtk.ListBox + Adw.ActionRow with
+    the ``boxed-list`` style). Action items use add_item (the GAction
+    auto-triggers on activation and the popover closes via row-activated).
+    The LaTeX-only items (comment/sync/separator) are toggled as whole rows
+    via set_visible. The zoom controls live in a non-activatable custom row.
     '''
 
     def __init__(self, workspace):
@@ -41,7 +42,7 @@ class ContextMenu(object):
         self.popover_more = PopoverManager.create_popover('context_menu')
 
         # The right-click popover, parented to the active document's view.
-        self.popover_pointer = StandardMenuPopover()
+        self.popover_pointer = AdwPopoverMenu()
         self.popover_pointer.set_size_request(300, -1)
         self.popover_pointer.set_has_arrow(False)
         self.popover_pointer.set_offset(150, 0)

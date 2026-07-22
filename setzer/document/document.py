@@ -18,7 +18,8 @@
 import gi
 gi.require_version('GtkSource', '5')
 gi.require_version('Gtk', '4.0')
-from gi.repository import GtkSource, Gtk, GObject
+gi.require_version('Adw', '1')
+from gi.repository import GtkSource, Gtk, GObject, Adw
 
 import os.path, time
 
@@ -80,11 +81,18 @@ class Document(Observable):
 
         self.settings.connect('settings_changed', self.on_settings_changed)
 
+        self.style_manager = Adw.StyleManager.get_default()
+        self.style_manager.connect('notify::dark', self.on_theme_colors_changed)
+
     def on_settings_changed(self, settings, parameter):
         section, item, value = parameter
 
-        if item == 'color_scheme':
-            self.source_buffer.set_style_scheme(ServiceLocator.get_style_scheme())
+        # 编辑器配色现跟随应用深浅色（见 on_theme_colors_changed），
+        # 不再有独立的 color_scheme 设置项。
+        pass
+
+    def on_theme_colors_changed(self, style_manager, pspec=None):
+        self.source_buffer.set_style_scheme(ServiceLocator.get_style_scheme())
 
     def set_filename(self, filename):
         if filename == None:
