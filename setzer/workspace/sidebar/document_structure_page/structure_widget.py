@@ -17,17 +17,18 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Pango
+from gi.repository import Gtk, Adw
 
 
 class StructureWidget(Gtk.ListBox):
     '''Base class for the sidebar structure lists (structure/files/labels/todos).
 
     Formerly a Gtk.DrawingArea with a custom snapshot()/draw_nodes() that
-    hand-painted icons, text and a hover background; now a standard Gtk.ListBox.
-    Hover highlighting comes from the built-in row :hover state, and clicks
-    are handled via the row-activated signal (delegated to the presenter's
-    on_row_activated, which receives the row carrying an `item_data` payload).
+    hand-painted icons, text and a hover background; now a standard Gtk.ListBox
+    whose rows are Adw.ActionRow instances. Hover highlighting comes from the
+    built-in row :hover state, and clicks are handled via the row-activated
+    signal (delegated to the presenter's on_row_activated, which receives the
+    row carrying an `item_data` payload).
     '''
 
     def __init__(self, model):
@@ -51,24 +52,10 @@ class StructureWidget(Gtk.ListBox):
             child = sibling
 
     def make_row(self, icon_name, text, indent):
-        row = Gtk.ListBoxRow()
+        row = Adw.ActionRow()
         row.set_selectable(False)
-
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
-        box.set_margin_start(9 + indent)
-        box.set_margin_end(6)
-        box.set_margin_top(4)
-        box.set_margin_bottom(4)
-
-        image = Gtk.Image(icon_name=icon_name)
-        image.set_pixel_size(16)
-        box.append(image)
-
-        label = Gtk.Label(label=text)
-        label.set_ellipsize(Pango.EllipsizeMode.END)
-        label.set_halign(Gtk.Align.START)
-        label.set_xalign(0.0)
-        box.append(label)
-
-        row.set_child(box)
+        row.set_activatable(True)
+        row.add_prefix(Gtk.Image(icon_name=icon_name))
+        row.set_title(text)
+        row.set_margin_start(9 + indent)
         return row

@@ -43,10 +43,8 @@ class SymbolsPage(object):
         self.update_recent_widget()
 
         for symbols_list_view in self.view.symbols_views:
-            event_controller = Gtk.GestureClick()
-            event_controller.set_button(1)
-            event_controller.connect('pressed', self.on_flowbox_clicked, symbols_list_view)
-            symbols_list_view.add_controller(event_controller)
+            symbols_list_view.connect('child-activated', self.on_flowbox_activated, symbols_list_view)
+        self.view.symbols_view_recent.connect('child-activated', self.on_recent_activated)
 
         self.view.scrolled_window.get_hadjustment().connect('changed', self.on_symbols_view_size_allocate)
         self.view.scrolled_window.get_vadjustment().connect('changed', self.on_scroll_or_resize)
@@ -61,19 +59,13 @@ class SymbolsPage(object):
     def update_recent_widget(self):
         for item in [item for item in self.recent]:
             self.add_recent_symbol_to_flowbox(item)
-        event_controller = Gtk.GestureClick()
-        event_controller.set_button(1)
-        event_controller.connect('pressed', self.on_recent_widget_clicked)
-        self.view.symbols_view_recent.add_controller(event_controller)
 
-    def on_recent_widget_clicked(self, event_controller, n_press, x, y):
-        flowbox = event_controller.get_widget()
-        child = flowbox.get_child_at_pos(x, y)
-        if child != None and self.workspace.active_document != None:
-            text = self.recent_details[- child.get_index() - 1][1]
-            self.workspace.actions.insert_symbol(None, [text])
-            self.add_recent_symbol(self.recent[- child.get_index() - 1])
-
+    def on_recent_activated(self, flowbox, child):
+        if self.workspace.active_document is None:
+            return
+        category, command = child.symbol_data
+        self.workspace.actions.insert_symbol(None, [command])
+        self.add_recent_symbol((category, command))
         return True
 
     def remove_recent_symbol(self, item):
@@ -107,24 +99,31 @@ class SymbolsPage(object):
 
             image = Gtk.Image(icon_name='sidebar-' + symbol[0] + '-symbolic')
             image.set_pixel_size(int(size * 1.5))
+            image.set_size_request(25 + 11, -1)
             tooltip_text = symbol[1]
             if symbol[2] != None: 
                 tooltip_text += ' (' + _('Package') + ': ' + symbol[2] + ')'
             image.set_tooltip_text(tooltip_text)
-            symbol.append(image)
+
+            button = Gtk.Button(child=image)
+            button.add_css_class('flat')
+            button.set_tooltip_text(tooltip_text)
+            child = Gtk.FlowBoxChild()
+            child.set_child(button)
+            # recent 点击只需 (category_folder, command) 即可重新插入并更新 recency
+            child.symbol_data = (category, command)
+            symbol.append(child)
             self.recent_details.append(symbol)
 
-            self.view.symbols_view_recent.insert(image, 0)
+            self.view.symbols_view_recent.insert(child, 0)
             self.view.queue_draw()
 
-    def on_flowbox_clicked(self, event_controller, n_press, x, y, symbols_view):
-        flowbox = event_controller.get_widget()
-        child = flowbox.get_child_at_pos(x, y)
-        if child != None and self.workspace.active_document != None:
-            text = symbols_view.visible_symbols[child.get_index()][1]
-            self.workspace.actions.insert_symbol(None, [text])
-            self.add_recent_symbol((flowbox.symbol_folder, symbols_view.visible_symbols[child.get_index()][1]))
-
+    def on_flowbox_activated(self, flowbox, child, symbols_view):
+        if self.workspace.active_document is None:
+            return
+        symbol = child.symbol_data
+        self.workspace.actions.insert_symbol(None, [symbol[1]])
+        self.add_recent_symbol((symbols_view.symbol_folder, symbol[1]))
         return True
 
     def on_scroll_or_resize(self, *args):
@@ -134,75 +133,49 @@ class SymbolsPage(object):
         else:
             self.view.prev_button.set_sensitive(True)
 
-        final_label_offset = self.view.vbox.get_allocated_height() - self.view.symbols_views[-1].get_allocated_height()
-        if scrolling_offset >= final_label_offset:
-            self.view.next_button.set_sensitive(False)
-        elif scrolling_offset >= self.view.vbox.get_allocated_height() - self.view.scrolled_window.get_allocated_height():
+        final_offset = self.get_final_section_offset()
+        if final_offset is None or scrolling_offset >= final_offset:
             self.view.next_button.set_sensitive(False)
         else:
             self.view.next_button.set_sensitive(True)
 
-        self.update_labels()
+    def get_section_offsets(self):
+        vadj = self.view.scrolled_window.get_vadjustment()
+        scrolling_offset = vadj.get_value()
+        offsets = list()
+        for group in self.view.labels:
+            if not group.get_visible():
+                continue
+            y = group.get_allocation().y - scrolling_offset
+            offsets.append(y)
+        return offsets
 
-    def update_labels(self):
-        offset = self.view.symbols_view_recent.get_allocated_height() + self.view.tabs.get_allocated_height() + 1
-        scrolling_offset = self.view.scrolled_window.get_vadjustment().get_value()
-        for key, symbols_view in enumerate(self.view.symbols_views):
-            label = self.view.labels[key]
-            placeholder = self.view.placeholders[len(self.view.symbols_views) - key - 1]
-            margin_top = max(0, offset - int(scrolling_offset))
-            label.set_margin_top(margin_top)
-            if len(symbols_view.visible_symbols) > 0:
-                offset += symbols_view.get_allocated_height() + self.view.tabs.get_allocated_height()
+    def get_final_section_offset(self):
+        vadj = self.view.scrolled_window.get_vadjustment()
+        scrolling_offset = vadj.get_value()
+        last = None
+        for group in self.view.labels:
+            if not group.get_visible():
+                continue
+            y = group.get_allocation().y - scrolling_offset
+            last = y
+        return last
 
     def on_next_button_clicked(self, button):
-        offset = self.view.symbols_view_recent.get_allocated_height() + self.view.tabs.get_allocated_height() + 1
         scrolling_offset = self.view.scrolled_window.get_vadjustment().get_value()
-        if scrolling_offset < offset:
-            self.scroll_view(offset)
-            return
 
-        for key, symbols_view in enumerate(self.view.symbols_views):
-            label = self.view.labels[len(self.view.symbols_views) - key - 1]
-
-            if len(symbols_view.visible_symbols) > 0:
-                view_height = (symbols_view.get_allocated_height() + self.view.tabs.get_allocated_height())
-            else:
-                view_height = 0
-
-            if offset > scrolling_offset - view_height:
-                new_offset = offset + (symbols_view.get_allocated_height() + self.view.tabs.get_allocated_height())
-                if key < len(self.view.symbols_views) - 1:
-                    self.scroll_view(new_offset)
+        for label_offset in self.get_section_offsets():
+            if scrolling_offset < label_offset:
+                self.scroll_view(label_offset)
                 break
-            offset += view_height
 
     def on_prev_button_clicked(self, button):
-        offset = self.view.symbols_view_recent.get_allocated_height() + self.view.tabs.get_allocated_height() + 1
-        old_offset = offset
         scrolling_offset = self.view.scrolled_window.get_vadjustment().get_value()
 
-        if scrolling_offset <= offset:
-            self.scroll_view(0)
-            return
-
-        for key, symbols_view in enumerate(self.view.symbols_views):
-            label = self.view.labels[len(self.view.symbols_views) - key - 1]
-
-            if len(symbols_view.visible_symbols) > 0:
-                view_height = (symbols_view.get_allocated_height() + self.view.tabs.get_allocated_height())
-            else:
-                view_height = 0
-
-            if offset > scrolling_offset - view_height:
-                if offset == int(scrolling_offset):
-                    new_offset = old_offset
-                else:
-                    new_offset = offset
-                self.scroll_view(new_offset)
+        for label_offset in reversed([0] + self.get_section_offsets()):
+            if scrolling_offset > label_offset:
+                self.scroll_view(label_offset)
                 break
-            old_offset = offset
-            offset += view_height
 
     def on_search_button_toggled(self, button):
         if button.get_active():
@@ -235,22 +208,20 @@ class SymbolsPage(object):
             symbols_view.visible_symbols = []
 
             for symbol in symbols_view.symbols:
-                image = symbol[5]
+                child = symbol[5]
                 symbol_found = True
                 for word in search_words:
                     if symbol[0].find(word) == -1:
                         symbol_found = False
                 if symbol_found:
                     symbols_view.visible_symbols.append(symbol)
-                    symbols_view.insert(image, -1)
+                    symbols_view.insert(child, -1)
 
-            adjustment = self.view.scrolled_window.get_vadjustment()
             symbols_found = (len(symbols_view.visible_symbols) > 0)
             any_symbols_found |= symbols_found
             symbols_view.set_visible(symbols_found)
-            self.view.labels[i].set_visible(symbols_found and (adjustment.get_upper() <= self.view.scrolled_window.get_allocated_height()))
+            self.view.labels[i].set_visible(symbols_found)
             self.view.placeholders[i].set_visible(symbols_found)
-            self.update_borders(symbols_view, symbols_view.get_allocated_width())
 
         if any_symbols_found:
             self.view.search_entry.remove_css_class('error')
@@ -293,5 +264,3 @@ class SymbolsPage(object):
         return False
 
     def ease(self, time): return (time - 1)**3 + 1
-
-

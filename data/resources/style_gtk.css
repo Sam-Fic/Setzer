@@ -1,7 +1,15 @@
 /*
- * Setzer 自定义样式已移除。
- * 应用现使用 Libadwaita / GTK 默认外观，跟随系统明暗主题。
+ * Setzer 自定义样式。
  *
- * Preferences 对话框带 .preferences 类（见 preferences_viewgtk.py），
- * 当前无需额外 CSS。如未来需局部微调可在此追加作用域于 .preferences 的规则。
+ * 应用整体使用 Libadwaita / GTK 默认外观，跟随系统明暗主题。
+ * 仅在原生组件无法达到目标行为时，追加作用域精确的最小 CSS。
  */
+
+/* 标题栏独立按钮：微悬停 / 按下时不显示底板色（透明）。
+   两个贴在一起的 linked 组（侧边栏开关、预览/帮助开关）不加此 class，
+   保留 Libadwaita 原生的 hover 反馈。:checked 态（toggle 选中）也保留。 */
+headerbar button.headerbar-plain:hover:not(:checked),
+headerbar button.headerbar-plain:active:not(:checked) {
+    background-color: transparent;
+    background-image: none;
+}

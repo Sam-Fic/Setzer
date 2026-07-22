@@ -24,11 +24,10 @@ import setzer.workspace.sidebar.document_structure_page.labels_viewgtk as labels
 
 class LabelsSection(object):
 
-    def __init__(self, data_provider, labels):
+    def __init__(self, data_provider):
         self.data_provider = data_provider
         self.data_provider.connect('data_updated', self.update_items)
 
-        self.headline_labels = labels
         self.view = labels_section_view.LabelsSectionView(self)
 
         self.labels = list()
@@ -60,6 +59,5 @@ class LabelsSection(object):
         self.labels = labels
 
         self.view.set_visible(len(labels) != 0)
-        self.headline_labels['inline'].set_visible(len(labels) != 0)
 
         self.view.populate()

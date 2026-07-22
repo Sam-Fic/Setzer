@@ -6,20 +6,23 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk
 from gi.repository import GLib
 from gi.repository import Gio
+
+import os
+import sys
 
 from setzer.app.service_locator import ServiceLocator
 from setzer.popovers.popover_manager import PopoverManager
@@ -33,6 +36,17 @@ from setzer.popovers.shortcutsbar.object_menu import ObjectMenu
 
 
 class Shortcutsbar(Gtk.Box):
+    '''Icon bar above the editor. Uses libadwaita-style overflow menu
+    (GNOME Builder/Text Editor pattern) instead of fixed-width wrapping:
+    when the window is narrow, the rightmost left-side buttons are hidden
+    from the bar and added to a `view-more-symbolic` popover instead.
+    Public method `set_overflow_count(n)` moves the rightmost n left
+    buttons into the popover; n=0 shows them all inline.
+
+    `do_size_allocate` is overridden to **continuously** reflow based on
+    the actual allocated width (instead of discrete Adw.Breakpoints that
+    would only flip at fixed thresholds). The number of overflowed buttons
+    matches the available space on every layout pass.'''
 
     def __init__(self):
         Gtk.Box.__init__(self)
@@ -47,65 +61,218 @@ class Shortcutsbar(Gtk.Box):
         self.current_popover = None # popover being processed
         self.current_page = 'main' # page being processed
 
-        self.top_icons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.top_icons.set_spacing(6)
-        self.right_icons = Gtk.Box()
-        self.right_icons.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.right_icons.set_spacing(6)
-        self.center_icons = Gtk.CenterBox()
-        self.center_icons.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.center_icons.set_hexpand(True)
+        # 可见 left 按钮容器（普通 Gtk.Box，不是 FlowBox——避免 FlowBox
+        # 内部布局对 children 拉伸/换行的副作用）。hide 时直接从 left_box
+        # remove 并加入 overflow listbox。
+        self.left_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.left_box.set_spacing(6)
+        self.left_box.set_can_focus(False)
 
-        self.italic_button = Gtk.Button()
-        self.italic_button.set_icon_name('format-text-italic-symbolic')
-        self.italic_button.set_action_name('win.insert-before-after')
-        self.italic_button.set_action_target_value(GLib.Variant('as', ['\\textit{', '}']))
-        self.italic_button.set_tooltip_text(_('Italic') + ' (' + _('Ctrl') + '+I)')
-        self.top_icons.prepend(self.italic_button)
+        # 右侧 4 个固定按钮容器
+        self.right_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.right_box.set_spacing(6)
+        self.right_box.set_can_focus(False)
 
-        self.bold_button = Gtk.Button()
-        self.bold_button.set_icon_name('format-text-bold-symbolic')
-        self.bold_button.set_action_name('win.insert-before-after')
-        self.bold_button.set_action_target_value(GLib.Variant('as', ['\\textbf{', '}']))
-        self.bold_button.set_tooltip_text(_('Bold') + ' (' + _('Ctrl') + '+B)')
-        self.top_icons.prepend(self.bold_button)
+        # 中间弹簧：把 right + overflow 推到右边
+        self._spacer = Gtk.Box()
+        self._spacer.set_hexpand(True)
 
-        self.insert_quotes_button()
+        # Overflow button (三点) + popover (ListBox of overflowed buttons)
+        # 位置：紧跟 left_box（左半边按钮组的最右端）——因为收起的是左侧按钮，
+        # 三点按钮应出现在左侧按钮群的末尾，而非整条工具栏的最右。
+        self.overflow_button = Gtk.MenuButton()
+        self.overflow_button.set_icon_name('view-more-symbolic')
+        self.overflow_button.set_tooltip_text(_('More'))
+        self.overflow_button.set_visible(False)  # 宽时隐藏
+        # 与 left_box 最后一个按钮保持 6px 间距（与 left_box 内部 spacing 一致）
+        self.overflow_button.set_margin_start(6)
 
-        self.insert_math_button()
-        self.insert_text_button()
-        self.insert_object_button()
+        overflow_popover = Gtk.Popover()
+        self.overflow_listbox = Gtk.ListBox()
+        self.overflow_listbox.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.overflow_listbox.set_show_separators(False)
+        # 让 listbox 有合理的 padding（default listbox 有 0 margin）
+        self.overflow_listbox.set_margin_top(6)
+        self.overflow_listbox.set_margin_bottom(6)
+        overflow_popover.set_child(self.overflow_listbox)
+        self.overflow_button.set_popover(overflow_popover)
 
-        self.insert_bibliography_button()
-        self.insert_beamer_button()
-        self.insert_document_button()
+        # 组装：left | overflow | spacer(hexpand) | right
+        # overflow 紧跟 left_box；spacer 把 right_box 推到最右端。
+        self.append(self.left_box)
+        self.append(self.overflow_button)
+        self.append(self._spacer)
+        self.append(self.right_box)
 
-        self.insert_wizard_button()
+        # 创建所有 left button（10 个，顺序：先建 = 最左，后建 = 最右）
+        # self.left_buttons[0] = 最左, self.left_buttons[-1] = 最右
+        self.left_buttons = []
+        self.insert_wizard_button()        # 0
+        self.insert_document_button()      # 1
+        self.insert_beamer_button()        # 2
+        self.insert_bibliography_button()  # 3
+        self.insert_object_button()        # 4
+        self.insert_text_button()          # 5
+        self.insert_math_button()          # 6
+        self.insert_quotes_button()        # 7
+        self.insert_bold_button()          # 8
+        self.insert_italic_button()        # 9 (最右)
 
-        self.button_search = Gtk.ToggleButton()
-        self.button_search.set_icon_name('edit-find-symbolic')
-        self.button_search.set_tooltip_text(_('Find') + ' (' + _('Ctrl') + '+F)')
-        self.right_icons.append(self.button_search)
+        # 创建所有 right button（4 个）
+        self.insert_search_button()
+        self.insert_replace_button()
+        self.insert_more_button()  # F12 context menu
+        self.insert_build_log_button()
 
-        self.button_replace = Gtk.ToggleButton()
-        self.button_replace.set_icon_name('edit-find-replace-symbolic')
-        self.button_replace.set_tooltip_text(_('Find and Replace') + ' (' + _('Ctrl') + '+H)')
-        self.right_icons.append(self.button_replace)
+        # Overflow state: 0 = 全部 visible
+        self._overflow_count = 0
+        self._reflow_pending = False
+        self._last_allocated_width = -1
 
-        self.button_more = Gtk.MenuButton()
-        self.button_more.set_icon_name('view-more-symbolic')
-        self.button_more.set_popover(PopoverManager.create_popover('context_menu').view)
-        self.button_more.set_tooltip_text(_('Context Menu') + ' (F12)')
-        self.right_icons.append(self.button_more)
+    # ------- continuous reflow: 父级 size 变化时自动计算 overflow -------
 
-        self.button_build_log = Gtk.ToggleButton()
-        self.button_build_log.set_icon_name('build-log-symbolic')
-        self.button_build_log.set_tooltip_text(_('Build log') + ' (F8)')
-        self.right_icons.append(self.button_build_log)
+    def do_measure(self, orientation, for_size):
+        # 横向：返回极小的自然宽度（0），让 shortcutsbar 的按钮数量不参与
+        # 父级 Gtk.Paned 的位置分配。
+        #
+        # 必要原因：preview_paned 的分隔条位置按子部件自然宽度自动分配。
+        # 若 shortcutsbar 自然宽度 = left_box 按钮数之和，则 reflow 把按钮移到
+        # overflow 时自然宽度变小 → paned 给编辑器列更少空间 → sb_width 变小
+        # → reflow 算出更大 target → 移走更多按钮 → 自然宽度更小 …… 正反馈级联，
+        # target 一路涨到上限，且在两个值之间震荡不收敛，按钮被裁切。
+        #
+        # 返回 0 后：编辑器列宽度由 document_stack（源码编辑器）的自然宽度驱动，
+        # 不随按钮数变化；shortcutsbar 通过 hexpand 的 _spacer 填充实际分配宽度，
+        # reflow 按该实际宽度收起按钮。feedback loop 断开。
+        #
+        # 纵向：用默认测量（按内容决定高度）。
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            return (0, 0, -1, -1)
+        else:
+            return Gtk.Box.do_measure(self, orientation, for_size)
 
-        self.append(self.top_icons)
-        self.append(self.center_icons)
-        self.append(self.right_icons)
+    def do_size_allocate(self, width, height, baseline):
+        Gtk.Box.do_size_allocate(self, width, height, baseline)
+        # 异步 reflow 避免在 size-allocate 流程中改 widget tree
+        if width != self._last_allocated_width and not self._reflow_pending:
+            self._reflow_pending = True
+            GLib.idle_add(self._reflow_idle, width)
+
+    def _reflow_idle(self, available_width):
+        self._reflow_pending = False
+        self.reflow_for_width(available_width)
+        self._last_allocated_width = available_width
+        return False  # remove idle
+
+    def reflow_for_width(self, available_width):
+        '''Compute how many left buttons fit in available_width and hide
+        the rest into the overflow popover. Called by both do_size_allocate
+        and the presenter's width-changed handler.
+
+        算法：测量每个 left button 的自然宽，累加得 left_total。测量 right 4 按钮
+        和 overflow 按钮的自然宽。avail = available_width - right_total - margins
+        - (overflow 按钮宽 + spacing 若 overflow visible)。
+        若 left_total <= avail：target=0；否则按从右到左逐个收起，直到能塞下。
+        为避免 feedback loop（reflow 改 tree→新 layout→新 reflow），overflow 按钮的
+        宽度始终按"已显示"计算（即一旦 target>0 就一直预留 overflow 按钮空间）。'''
+        if available_width <= 1:
+            return
+        left_widths = []
+        for btn in self.left_buttons:
+            try:
+                _, nat = btn.get_preferred_width()
+            except Exception:
+                nat = 36
+            left_widths.append(max(0, nat))
+        right_widths = []
+        for btn in [self.button_search, self.button_replace, self.button_more, self.button_build_log]:
+            try:
+                _, nat = btn.get_preferred_width()
+            except Exception:
+                nat = 36
+            right_widths.append(max(0, nat))
+        try:
+            _, overflow_nat = self.overflow_button.get_preferred_width()
+        except Exception:
+            overflow_nat = 36
+
+        spacing = 6
+        n_left = len(left_widths)
+        n_right = len(right_widths)
+
+        left_total = sum(left_widths) + spacing * max(0, n_left - 1)
+        right_total = sum(right_widths) + spacing * max(0, n_right - 1)
+        # 始终预留 overflow 按钮空间（即使当前 target=0），避免 feedback loop
+        # 当 target=0 时 overflow 按钮隐藏，下次 reflow 不会因它消失而扩张
+        fixed = right_total + 12 + overflow_nat + spacing  # margins + overflow
+
+        avail = available_width - fixed
+
+        if left_total <= avail:
+            target = 0
+        else:
+            excess = left_total - avail
+            target = 0
+            accumulated = 0
+            for w in reversed(left_widths):
+                accumulated += w + spacing
+                target += 1
+                if accumulated >= excess:
+                    break
+            target = min(target, n_left)
+
+        target = max(0, target)
+        if os.environ.get('SETZER_DEBUG_OVERFLOW'):
+            print(f"[reflow_for_width] avail_width={available_width} left_total={left_total} fixed={fixed} avail={avail} target={target} cur={self._overflow_count}", file=sys.stderr)
+        if target != self._overflow_count:
+            self.set_overflow_count(target)
+
+    # ------- overflow API (called by MainWindow's Adw.Breakpoints) -------
+
+    def set_overflow_count(self, n):
+        '''Move the rightmost n left buttons into the overflow popover.
+        0 = show all inline. Idempotent.'''
+        n = max(0, min(n, len(self.left_buttons)))
+        if os.environ.get('SETZER_DEBUG_OVERFLOW'):
+            print(f"[set_overflow_count] n={n} cur={self._overflow_count}", file=sys.stderr)
+        if n == self._overflow_count:
+            return
+        # 先把当前在 overflow listbox 里的所有 button 还原到 left_box
+        for btn in self.left_buttons:
+            if btn.get_parent() is not self.left_box:
+                self.left_box.append(btn)
+        # 把最后 n 个从 left_box 移除。
+        # 注意：必须 guard n>0——Python 中 list[-0:] == list[0:]（整个列表），
+        # 若不 guard，n=0 时会把刚还原的全部按钮又移除，导致最宽档位左侧按钮全消失。
+        if n > 0:
+            for btn in self.left_buttons[-n:]:
+                self.left_box.remove(btn)
+        # 重建 overflow listbox
+        self._refresh_overflow_list(n)
+        self._overflow_count = n
+        # 0 时隐藏 overflow button，否则显示
+        self.overflow_button.set_visible(n > 0)
+
+    def _refresh_overflow_list(self, n):
+        # 清空
+        while True:
+            row = self.overflow_listbox.get_row_at_index(0)
+            if row is None:
+                break
+            self.overflow_listbox.remove(row)
+        if n == 0:
+            return
+        # 为每个 hidden button 创建一个 ListBoxRow（含 icon + label）
+        for btn in self.left_buttons[-n:]:
+            row = _OverflowRow(btn)
+            self.overflow_listbox.append(row)
+
+    # ------- left button construction helpers -------
+
+    def _add_left_button(self, button):
+        '''Append a new left button to left_box and record it in left_buttons.'''
+        self.left_box.append(button)
+        self.left_buttons.append(button)
 
     def insert_wizard_button(self):
         icon_widget = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -127,7 +294,102 @@ class Shortcutsbar(Gtk.Box):
         self.wizard_button.set_child(icon_widget)
         self.wizard_button.set_action_name('win.show-document-wizard')
 
-        self.top_icons.prepend(self.wizard_button)
+        self._add_left_button(self.wizard_button)
+
+    def insert_document_button(self):
+        self.document_button = Gtk.MenuButton()
+        self.document_button.set_icon_name('application-x-addon-symbolic')
+        self.document_button.set_tooltip_text(_('Document'))
+        self._setup_menu_button(self.document_button, DocumentMenu())
+        self._add_left_button(self.document_button)
+
+    def insert_beamer_button(self):
+        self.beamer_button = Gtk.MenuButton()
+        self.beamer_button.set_icon_name('view-list-bullet-symbolic')
+        self.beamer_button.set_tooltip_text(_('Beamer'))
+        self._setup_menu_button(self.beamer_button, BeamerMenu())
+        self._add_left_button(self.beamer_button)
+
+    def insert_bibliography_button(self):
+        self.bibliography_button = Gtk.MenuButton()
+        self.bibliography_button.set_icon_name('library-symbolic')
+        self.bibliography_button.set_tooltip_text(_('Bibliography'))
+        self._setup_menu_button(self.bibliography_button, BibliographyMenu())
+        self._add_left_button(self.bibliography_button)
+
+    def insert_text_button(self):
+        self.text_button = Gtk.MenuButton()
+        self.text_button.set_icon_name('text-symbolic')
+        self.text_button.set_tooltip_text(_('Text'))
+        self._setup_menu_button(self.text_button, TextMenu())
+        self._add_left_button(self.text_button)
+
+    def insert_quotes_button(self):
+        self.quotes_button = Gtk.MenuButton()
+        self.quotes_button.set_icon_name('own-quotes-symbolic')
+        self.quotes_button.set_tooltip_text(_('Quotes') + ' (' + _('Ctrl') + '+")')
+        self._setup_menu_button(self.quotes_button, QuotesMenu())
+        self._add_left_button(self.quotes_button)
+
+    def insert_math_button(self):
+        self.math_button = Gtk.MenuButton()
+        self.math_button.set_icon_name('own-math-menu-symbolic')
+        self.math_button.set_tooltip_text(_('Math'))
+        self._setup_menu_button(self.math_button, MathMenu())
+        self._add_left_button(self.math_button)
+
+    def insert_object_button(self):
+        self.insert_object_button = Gtk.MenuButton()
+        self.insert_object_button.set_icon_name('insert-object-symbolic')
+        self.insert_object_button.set_tooltip_text(_('Objects'))
+        self._setup_menu_button(self.insert_object_button, ObjectMenu())
+        self._add_left_button(self.insert_object_button)
+
+    def insert_bold_button(self):
+        self.bold_button = Gtk.Button()
+        self.bold_button.set_icon_name('format-text-bold-symbolic')
+        self.bold_button.set_action_name('win.insert-before-after')
+        self.bold_button.set_action_target_value(GLib.Variant('as', ['\\textbf{', '}']))
+        self.bold_button.set_tooltip_text(_('Bold') + ' (' + _('Ctrl') + '+B)')
+        self._add_left_button(self.bold_button)
+
+    def insert_italic_button(self):
+        self.italic_button = Gtk.Button()
+        self.italic_button.set_icon_name('format-text-italic-symbolic')
+        self.italic_button.set_action_name('win.insert-before-after')
+        self.italic_button.set_action_target_value(GLib.Variant('as', ['\\textit{', '}']))
+        self.italic_button.set_tooltip_text(_('Italic') + ' (' + _('Ctrl') + '+I)')
+        self._add_left_button(self.italic_button)
+
+    # ------- right button construction helpers -------
+
+    def _add_right_button(self, button):
+        self.right_box.append(button)
+
+    def insert_search_button(self):
+        self.button_search = Gtk.ToggleButton()
+        self.button_search.set_icon_name('edit-find-symbolic')
+        self.button_search.set_tooltip_text(_('Find') + ' (' + _('Ctrl') + '+F)')
+        self._add_right_button(self.button_search)
+
+    def insert_replace_button(self):
+        self.button_replace = Gtk.ToggleButton()
+        self.button_replace.set_icon_name('edit-find-replace-symbolic')
+        self.button_replace.set_tooltip_text(_('Find and Replace') + ' (' + _('Ctrl') + '+H)')
+        self._add_right_button(self.button_replace)
+
+    def insert_more_button(self):
+        self.button_more = Gtk.MenuButton()
+        self.button_more.set_icon_name('view-more-symbolic')
+        self.button_more.set_popover(PopoverManager.create_popover('context_menu').view)
+        self.button_more.set_tooltip_text(_('Context Menu') + ' (F12)')
+        self._add_right_button(self.button_more)
+
+    def insert_build_log_button(self):
+        self.button_build_log = Gtk.ToggleButton()
+        self.button_build_log.set_icon_name('build-log-symbolic')
+        self.button_build_log.set_tooltip_text(_('Build log') + ' (F8)')
+        self._add_right_button(self.button_build_log)
 
     def _setup_menu_button(self, button, menu_builder):
         '''Wire a Gio.Menu model to a Gtk.MenuButton and add the standard
@@ -138,60 +400,64 @@ class Shortcutsbar(Gtk.Box):
         if popover is not None:
             popover.add_css_class('menu')
 
-    def insert_document_button(self):
-        self.document_button = Gtk.MenuButton()
-        self.document_button.set_icon_name('application-x-addon-symbolic')
-        self.document_button.set_tooltip_text(_('Document'))
-        self._setup_menu_button(self.document_button, DocumentMenu())
 
-        self.top_icons.prepend(self.document_button)
+class _OverflowRow(Gtk.ListBoxRow):
+    '''A ListBoxRow that proxies a Gtk.Button: clicking it activates the
+    original button's action and pops down the overflow popover.
 
-    def insert_beamer_button(self):
-        self.beamer_button = Gtk.MenuButton()
-        self.beamer_button.set_icon_name('view-list-bullet-symbolic')
-        self.beamer_button.set_tooltip_text(_('Beamer'))
-        self._setup_menu_button(self.beamer_button, BeamerMenu())
+    The original button's `set_action_name`/`set_action_target_value` was
+    applied to the action group on the parent window; re-binding those
+    properties on this row would attach a different actionable. Instead we
+    forward the activation via the parent window's action group.'''
 
-        self.top_icons.prepend(self.beamer_button)
+    def __init__(self, src_button):
+        Gtk.ListBoxRow.__init__(self)
+        self._src_button = src_button
+        self.set_activatable(True)
+        self.set_selectable(False)
 
-    def insert_bibliography_button(self):
-        self.bibliography_button = Gtk.MenuButton()
-        self.bibliography_button.set_icon_name('library-symbolic')
-        self.bibliography_button.set_tooltip_text(_('Bibliography'))
-        self._setup_menu_button(self.bibliography_button, BibliographyMenu())
+        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+        box.set_margin_start(12)
+        box.set_margin_end(12)
+        box.set_margin_top(6)
+        box.set_margin_bottom(6)
 
-        self.top_icons.prepend(self.bibliography_button)
+        icon_name = src_button.get_icon_name()
+        if icon_name:
+            icon = Gtk.Image.new_from_icon_name(icon_name)
+            box.append(icon)
 
-    def insert_text_button(self):
-        self.text_button = Gtk.MenuButton()
-        self.text_button.set_icon_name('text-symbolic')
-        self.text_button.set_tooltip_text(_('Text'))
-        self._setup_menu_button(self.text_button, TextMenu())
+        # tooltip_text 形如 "Italic (Ctrl+I)"; 截取括号前作为 label
+        tooltip = src_button.get_tooltip_text() or ''
+        label_text = tooltip.split(' (', 1)[0]
+        label = Gtk.Label(label=label_text)
+        label.set_xalign(0)
+        label.set_hexpand(True)
+        box.append(label)
 
-        self.top_icons.prepend(self.text_button)
+        self.set_child(box)
 
-    def insert_quotes_button(self):
-        self.quotes_button = Gtk.MenuButton()
-        self.quotes_button.set_icon_name('own-quotes-symbolic')
-        self.quotes_button.set_tooltip_text(_('Quotes') + ' (' + _('Ctrl') + '+")')
-        self._setup_menu_button(self.quotes_button, QuotesMenu())
-
-        self.top_icons.prepend(self.quotes_button)
-
-    def insert_math_button(self):
-        self.math_button = Gtk.MenuButton()
-        self.math_button.set_icon_name('own-math-menu-symbolic')
-        self.math_button.set_tooltip_text(_('Math'))
-        self._setup_menu_button(self.math_button, MathMenu())
-
-        self.top_icons.prepend(self.math_button)
-
-    def insert_object_button(self):
-        self.insert_object_button = Gtk.MenuButton()
-        self.insert_object_button.set_icon_name('insert-object-symbolic')
-        self.insert_object_button.set_tooltip_text(_('Objects'))
-        self._setup_menu_button(self.insert_object_button, ObjectMenu())
-
-        self.top_icons.prepend(self.insert_object_button)
-
-
+    def do_activate(self):
+        Gtk.ListBoxRow.do_activate(self)
+        btn = self._src_button
+        # 关闭 overflow popover
+        popover = btn.get_root()
+        # 找所有 Gtk.Popover 并 popdown（更稳：直接 emit activate）
+        action_name = btn.get_action_name()
+        if action_name:
+            # 形如 "win.show-document-wizard"
+            try:
+                prefix, name = action_name.split('.', 1)
+            except ValueError:
+                prefix, name = None, None
+            if prefix and name:
+                win = btn.get_root()
+                if win is not None and hasattr(win, 'get_action_group'):
+                    ag = win.get_action_group(prefix)
+                    if ag is not None:
+                        action = ag.lookup_action(name)
+                        if action is not None:
+                            action.activate(btn.get_action_target_value())
+                            return
+        # fallback: emit 'clicked' (对非 action 的 button 有效，如 menu button)
+        btn.emit('clicked')

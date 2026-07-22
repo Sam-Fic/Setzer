@@ -17,7 +17,8 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, Gtk
+gi.require_version('Adw', '1')
+from gi.repository import Gdk, Gtk, Adw
 
 import xml.etree.ElementTree as ET
 import os
@@ -31,17 +32,6 @@ class SymbolsPageView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.set_size_request(252, -1)
-
-
-        self.overlay = Gtk.Overlay()
-        self.overlay.set_vexpand(True)
-        self.overlay.set_can_focus(False)
-        self.vbox_top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_vexpand(True)
-        self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.scrolled_window.set_child(self.vbox)
 
         self.tabs_box = Gtk.CenterBox()
         self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
@@ -84,29 +74,24 @@ class SymbolsPageView(Gtk.Box):
         self.search_revealer.set_child(self.search_box)
 
         self.tabs_box.set_end_widget(self.tabs)
-        self.vbox_top.append(self.tabs_box)
-        self.vbox_top.append(self.scrolled_window)
-        self.overlay.set_child(self.vbox_top)
-        self.append(self.overlay)
+        self.append(self.tabs_box)
         self.append(self.search_revealer)
 
-        self.labels = list()
-        self.symbols_views = list()
-        self.placeholders = list()
+        # Adw.PreferencesPage 提供原生分组标题与滚动；其内部第一个子控件是
+        # Gtk.ScrolledWindow，逻辑层通过 self.scrolled_window 访问其 vadjustment。
+        self.page = Adw.PreferencesPage()
+        self.page.set_vexpand(True)
+        self.append(self.page)
+        self.scrolled_window = self.page.get_first_child()
 
-        self.label_recent = Gtk.Label(label=_('Recent'))
-        self.label_recent.set_xalign(0)
-        self.label_recent.set_halign(Gtk.Align.START)
-        self.label_recent.set_valign(Gtk.Align.START)
-        self.label_recent.set_size_request(108, -1)
-        self.label_recent.set_can_target(False)
-        self.overlay.add_overlay(self.label_recent)
+        self.symbols_views = list()
+        self.labels = list()          # Adw.PreferencesGroup 引用，供滚动导航取 y 偏移
+        self.placeholders = list()    # 与 labels 对应的 group（搜索过滤时统一显隐）
 
         self.symbols_view_recent = Gtk.FlowBox()
         self.symbols_view_recent.set_homogeneous(False)
         self.symbols_view_recent.set_valign(Gtk.Align.START)
-        self.symbols_view_recent.set_max_children_per_line(20)
-        self.vbox.append(self.symbols_view_recent)
+        self.add_category(_('Recent'), self.symbols_view_recent)
 
         self.symbols_lists = list()
         self.symbols_lists.append(['greek_letters', 'own-symbols-greek-letters-symbolic', _('Greek Letters'), 
@@ -124,23 +109,20 @@ class SymbolsPageView(Gtk.Box):
 
         self.init_symbols_lists()
 
+    def add_category(self, title, flowbox):
+        group = Adw.PreferencesGroup()
+        group.set_title(title)
+        group.add(flowbox)
+        self.page.add(group)
+        self.labels.append(group)
+        self.placeholders.append(group)
+        return group
+
     def init_symbols_lists(self):
         for symbols_list in self.symbols_lists:
             symbols_list_view = eval(symbols_list[3])
-            label = Gtk.Label(label=symbols_list[2])
-            label.set_xalign(0)
-            label.set_halign(Gtk.Align.START)
-            label.set_valign(Gtk.Align.START)
-            label.set_size_request(108, -1)
-            label.set_can_target(False)
-            self.overlay.add_overlay(label)
-            self.labels.append(label)
-            placeholder = Gtk.Label(label=symbols_list[2])
-            placeholder.set_xalign(0)
-            self.placeholders.append(placeholder)
-            self.vbox.append(placeholder)
+            self.add_category(symbols_list[2], symbols_list_view)
             self.symbols_views.append(symbols_list_view)
-            self.vbox.append(symbols_list_view)
 
 
 class SidebarSymbolsList(Gtk.FlowBox):
@@ -159,7 +141,6 @@ class SidebarSymbolsList(Gtk.FlowBox):
         
         self.set_homogeneous(False)
         self.set_valign(Gtk.Align.START)
-        self.set_max_children_per_line(20)
         
         xml_tree = ET.parse(os.path.join(ServiceLocator.get_resources_path(), 'symbols', symbol_folder + '.xml'))
         xml_root = xml_tree.getroot()
@@ -174,13 +155,20 @@ class SidebarSymbolsList(Gtk.FlowBox):
 
             image = Gtk.Image(icon_name='sidebar-' + symbol[0] + '-symbolic')
             image.set_pixel_size(int(size * 1.5))
+            image.set_size_request(self.symbol_width + 11, -1)
             tooltip_text = symbol[1]
             if symbol[2] != None: 
                 tooltip_text += ' (' + _('Package') + ': ' + symbol[2] + ')'
             image.set_tooltip_text(tooltip_text)
-            image.set_size_request(self.symbol_width + 11, -1)
-            symbol.append(image)
+
+            # 用 Gtk.Button 包裹 Image 以获得原生按钮语义与键盘可达性，
+            # 再放进 Gtk.FlowBoxChild；点击经 FlowBox 的 child-activated 信号处理。
+            button = Gtk.Button(child=image)
+            button.add_css_class('flat')
+            button.set_tooltip_text(tooltip_text)
+            child = Gtk.FlowBoxChild()
+            child.set_child(button)
+            child.symbol_data = symbol
+            symbol.append(child)
             self.visible_symbols.append(symbol)
-            self.insert(image, -1)
-
-
+            self.insert(child, -1)

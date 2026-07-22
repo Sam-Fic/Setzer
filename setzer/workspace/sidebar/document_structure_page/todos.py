@@ -24,11 +24,10 @@ import setzer.workspace.sidebar.document_structure_page.todos_viewgtk as todos_s
 
 class TodosSection(object):
 
-    def __init__(self, data_provider, todos):
+    def __init__(self, data_provider):
         self.data_provider = data_provider
         self.data_provider.connect('data_updated', self.update_items)
 
-        self.headline_labels = todos
         self.view = todos_section_view.TodosSectionView(self)
 
         self.todos = list()
@@ -60,6 +59,5 @@ class TodosSection(object):
         self.todos = todos
 
         self.view.set_visible(len(todos) != 0)
-        self.headline_labels['inline'].set_visible(len(todos) != 0)
 
         self.view.populate()

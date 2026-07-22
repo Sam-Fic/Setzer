@@ -75,6 +75,9 @@ class Shortcutsbar(object):
 
     def on_paned_width_changed(self, widget):
         self.width = widget.get_allocated_width()
+        # 同步触发 shortcutsbar 的 overflow reflow——按当前实际宽度
+        # 计算要把几个 left 按钮收进 overflow 三点菜单
+        self.view.reflow_for_width(self.width)
         self.update_wizard_button(animate=False)
 
     def on_document_changed(self, workspace=None, parameter=None):

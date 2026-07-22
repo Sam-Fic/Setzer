@@ -56,6 +56,7 @@ class HeaderBar(object):
         self.open_document_blank_button = Gtk.Button.new_with_label(_('Open') + '...')
         self.open_document_blank_button.set_tooltip_text(_('Open a document') + ' (' + _('Ctrl') + '+O)')
         self.open_document_blank_button.set_action_name('win.open-document-dialog')
+        self.open_document_blank_button.add_css_class('headerbar-plain')
 
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         box.append(Gtk.Label(label=_('Open')))
@@ -65,6 +66,7 @@ class HeaderBar(object):
         self.open_document_button.set_can_focus(False)
         self.open_document_button.set_tooltip_text(_('Open a document') + ' (' + _('Shift') + '+' + _('Ctrl') + '+O)')
         self.open_document_button.set_popover(PopoverManager.get_popover('open_document').view.popover)
+        self.open_document_button.add_css_class('headerbar-plain')
 
         # new document
         self.new_document_button = Gtk.MenuButton()
@@ -75,6 +77,7 @@ class HeaderBar(object):
         self.new_document_button.set_can_focus(False)
         self.new_document_button.set_tooltip_text(_('Create a new document'))
         self.new_document_button.set_menu_model(PopoverManager.get_popover('new_document').view.model)
+        self.new_document_button.add_css_class('headerbar-plain')
         popover = self.new_document_button.get_popover()
         if popover is not None:
             popover.add_css_class('menu')
@@ -87,12 +90,14 @@ class HeaderBar(object):
         self.hamburger = PopoverManager.create_popover('hamburger_menu')
         self.menu_button = self.hamburger.get_menu_button()
         self.menu_button.set_can_focus(False)
+        self.menu_button.add_css_class('headerbar-plain')
 
         # save document button (icon only)
         self.save_document_button = Gtk.Button(icon_name='document-save-symbolic')
         self.save_document_button.set_can_focus(False)
         self.save_document_button.set_tooltip_text(_('Save the current document') + ' (' + _('Ctrl') + '+S)')
         self.save_document_button.set_action_name('win.save')
+        self.save_document_button.add_css_class('headerbar-plain')
 
         # help and preview toggles
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -135,6 +140,7 @@ class HeaderBar(object):
         self.center_button.set_child(self.document_title)
         self.center_button.set_valign(Gtk.Align.FILL)
         self.center_button.set_popover(self.open_docs_popover.view.popover)
+        self.center_button.add_css_class('headerbar-plain')
 
         self.center_title_welcome = Adw.WindowTitle()
         self.center_title_welcome.set_title(_('Welcome to Setzer'))

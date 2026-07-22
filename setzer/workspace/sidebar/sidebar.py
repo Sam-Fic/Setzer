@@ -44,26 +44,22 @@ class Sidebar(object):
 
     def create_document_structure_page(self):
         self.document_structure_page = document_structure_page.DocumentStructurePage()
-        self.document_structure_page.set_size_request(252, -1)
 
         self.files_section = files_section.FilesSection(self.data_provider)
-        self.document_structure_page.add_content_widget('files', self.files_section.view)
+        self.document_structure_page.add_section('files', _('Files'), self.files_section.view)
 
-        self.document_structure_page.add_label('structure', _('Document Structure'))
-        self.structure_section = structure_section.StructureSection(self.data_provider, self.document_structure_page.labels['structure'])
-        self.document_structure_page.add_content_widget('structure', self.structure_section.view)
+        self.structure_section = structure_section.StructureSection(self.data_provider)
+        self.document_structure_page.add_section('structure', _('Document Structure'), self.structure_section.view)
 
-        self.document_structure_page.add_label('labels', _('Labels'))
-        self.labels_section = labels_section.LabelsSection(self.data_provider, self.document_structure_page.labels['labels'])
-        self.document_structure_page.add_content_widget('labels', self.labels_section.view)
+        self.labels_section = labels_section.LabelsSection(self.data_provider)
+        self.document_structure_page.add_section('labels', _('Labels'), self.labels_section.view)
 
-        self.document_structure_page.add_label('todos', _('To-Dos'))
-        self.todos_section = todos_section.TodosSection(self.data_provider, self.document_structure_page.labels['todos'])
-        self.document_structure_page.add_content_widget('todos', self.todos_section.view)
+        self.todos_section = todos_section.TodosSection(self.data_provider)
+        self.document_structure_page.add_section('todos', _('To-Dos'), self.todos_section.view)
 
-        self.document_structure_page.add_label('stats', _('Document Stats'))
-        self.document_stats_section = document_stats_section.DocumentStats(self.workspace, self.document_structure_page.labels['stats'])
-        self.document_structure_page.add_content_widget('stats', self.document_stats_section.view)
+        self.document_stats_section = document_stats_section.DocumentStats(self.workspace)
+        self.document_stats_section.set_group(
+            self.document_structure_page.add_section('stats', _('Document Stats'), self.document_stats_section.view))
 
     def create_symbols_page(self):
         self.symbols_page = symbols_page.SymbolsPage(self.workspace)

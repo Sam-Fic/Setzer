@@ -13,58 +13,49 @@
 # GNU General Public License for more details.
 # 
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>
+# along with this program. If not to, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, GObject
+gi.require_version('Adw', '1')
+from gi.repository import Gtk, GObject, Adw
 
 import time
 
 
-class DocumentStructurePage(Gtk.Overlay):
+class DocumentStructurePage(Gtk.Box):
 
     def __init__(self):
-        Gtk.Overlay.__init__(self)
-        self.labels = dict()
-        self.content_vbox_children = list()
+        Gtk.Box.__init__(self)
+        self.set_orientation(Gtk.Orientation.VERTICAL)
+        self.sections = dict()
         self.scroll_to = None
 
-        self.content_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_child(self.content_vbox)
-        self.scrolled_window.set_vexpand(True)
-        self.scrolled_window.set_can_focus(False)
-
-        self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add_buttons()
-        self.vbox.append(self.scrolled_window)
-        self.set_child(self.vbox)
 
+        self.page = Adw.PreferencesPage()
+        self.page.set_vexpand(True)
+        # 注意：tabs_box 已在 add_buttons() 内部 append 到 self，这里只追加 page
+        self.append(self.page)
+
+        # Adw.PreferencesPage 自身不暴露 get_vadjustment()，但其内部第一个
+        # 子控件就是 Gtk.ScrolledWindow，从中取得 vadjustment 供滚动导航使用。
+        self.scrolled_window = self.page.get_first_child()
         self.scrolled_window.get_vadjustment().connect('changed', self.on_scroll_or_resize)
         self.scrolled_window.get_vadjustment().connect('value-changed', self.on_scroll_or_resize)
         self.next_button.connect('clicked', self.on_next_button_clicked)
         self.prev_button.connect('clicked', self.on_prev_button_clicked)
 
-    def add_content_widget(self, name, widget):
-        self.content_vbox.append(widget)
-        self.content_vbox_children.append(widget)
+    def add_section(self, name, title, widget):
+        group = Adw.PreferencesGroup()
+        group.set_title(title)
+        group.add(widget)
+        self.page.add(group)
+        self.sections[name] = group
+        return group
 
-    def add_label(self, name, text):
-        label_inline = Gtk.Label(label=text)
-        label_inline.set_xalign(0)
-        self.content_vbox.append(label_inline)
-        self.content_vbox_children.append(label_inline)
-
-        label_overlay = Gtk.Label(label=text)
-        label_overlay.set_xalign(0)
-        label_overlay.set_halign(Gtk.Align.START)
-        label_overlay.set_valign(Gtk.Align.START)
-        label_overlay.set_size_request(148, -1)
-        label_overlay.set_can_target(False)
-        self.add_overlay(label_overlay)
-
-        self.labels[name] = {'inline': label_inline, 'overlay': label_overlay}
+    def set_section_visible(self, name, visible):
+        self.sections[name].set_visible(visible)
 
     def add_buttons(self):
         self.tabs = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -87,7 +78,7 @@ class DocumentStructurePage(Gtk.Overlay):
         self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.tabs_box.set_start_widget(Gtk.Label(label='Files'))
         self.tabs_box.set_end_widget(self.tabs)
-        self.vbox.append(self.tabs_box)
+        self.append(self.tabs_box)
 
     def on_scroll_or_resize(self, *args):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
@@ -96,30 +87,34 @@ class DocumentStructurePage(Gtk.Overlay):
         else:
             self.prev_button.set_sensitive(True)
 
-        label_offsets = self.get_label_offsets()
-        height_condition = scrolling_offset < self.content_vbox.get_allocated_height() - self.scrolled_window.get_allocated_height()
+        label_offsets = self.get_section_offsets()
+        height_condition = scrolling_offset < self.page.get_allocated_height() - self.scrolled_window.get_allocated_height()
         label_condition = len(label_offsets) > 0 and scrolling_offset < label_offsets[-1]
         self.next_button.set_sensitive(height_condition and label_condition)
 
-        self.update_labels()
+    def get_section_offsets(self):
+        vadj = self.scrolled_window.get_vadjustment()
+        scrolling_offset = vadj.get_value()
+        offsets = list()
+        for group in self.get_page_groups():
+            if not group.get_visible():
+                continue
+            y = group.get_allocation().y - scrolling_offset
+            offsets.append(y)
+        return offsets
 
-    def update_labels(self):
-        tabs_height = self.tabs_box.get_allocated_height()
-        scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
-
-        if self.content_vbox.get_allocated_height() == self.scrolled_window.get_allocated_height():
-            for label_name in self.labels:
-                self.labels[label_name]['overlay'].set_visible(False)
-        else:
-            for label_name, label_offset in zip(self.labels, self.get_label_offsets()):
-                margin_top = max(0, label_offset - int(scrolling_offset))
-                self.labels[label_name]['overlay'].set_visible(True)
-                self.labels[label_name]['overlay'].set_margin_top(margin_top)
+    def get_page_groups(self):
+        groups = list()
+        child = self.page.get_first_child()
+        while child is not None:
+            groups.append(child)
+            child = child.get_next_sibling()
+        return groups
 
     def on_next_button_clicked(self, button):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
 
-        for label_offset in self.get_label_offsets():
+        for label_offset in self.get_section_offsets():
             if scrolling_offset < label_offset:
                 self.scroll_view(label_offset)
                 break
@@ -127,22 +122,10 @@ class DocumentStructurePage(Gtk.Overlay):
     def on_prev_button_clicked(self, button):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
 
-        for label_offset in reversed([0] + self.get_label_offsets()):
+        for label_offset in reversed([0] + self.get_section_offsets()):
             if scrolling_offset > label_offset:
                 self.scroll_view(label_offset)
                 break
-
-    def get_label_offsets(self):
-        offsets = list()
-        offset = self.tabs_box.get_allocated_height()
-        labels = [label['inline'] for label in self.labels.values()]
-
-        for child in self.content_vbox_children:
-            if child in labels:
-                offsets.append(offset)
-            if child.is_visible():
-                offset += child.get_allocated_height()
-        return offsets
 
     def scroll_view(self, position, duration=0.2):
         adjustment = self.scrolled_window.get_vadjustment()
@@ -169,5 +152,3 @@ class DocumentStructurePage(Gtk.Overlay):
         return False
 
     def ease(self, time): return (time - 1)**3 + 1
-
-

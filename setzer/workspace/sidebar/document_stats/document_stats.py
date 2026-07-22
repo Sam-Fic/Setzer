@@ -30,10 +30,10 @@ from setzer.helpers.timer import timer
 
 class DocumentStats(object):
 
-    def __init__(self, workspace, labels):
+    def __init__(self, workspace):
         self.workspace = workspace
-        self.headline_labels = labels
         self.document = None
+        self.group = None
 
         self.view = document_stats_section_view.DocumentStatsView()
 
@@ -177,9 +177,12 @@ class DocumentStats(object):
 
         return True
 
+    def set_group(self, group):
+        self.group = group
+
     def hide_view(self):
         self.view.set_visible(False)
-        self.headline_labels['inline'].set_visible(False)
-        self.headline_labels['overlay'].set_visible(False)
+        if self.group is not None:
+            self.group.set_visible(False)
 
 

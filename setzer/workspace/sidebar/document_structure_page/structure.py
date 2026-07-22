@@ -24,13 +24,12 @@ import setzer.workspace.sidebar.document_structure_page.structure_viewgtk as str
 
 class StructureSection(object):
 
-    def __init__(self, data_provider, labels):
+    def __init__(self, data_provider):
         self.data_provider = data_provider
         self.data_provider.connect('data_updated', self.update_items)
 
         self.levels = {'part': 0, 'chapter': 1, 'section': 2, 'subsection': 3, 'subsubsection': 4, 'paragraph': 5, 'subparagraph': 6, 'file': 7}
 
-        self.labels = labels
         self.view = structure_section_view.StructureSectionView(self)
 
         self.nodes = list()
@@ -108,7 +107,6 @@ class StructureSection(object):
                 predecessor[i] = node
 
         self.view.set_visible(len(nodes_in_line) != 0)
-        self.labels['inline'].set_visible(len(nodes_in_line) != 0)
 
         self.nodes_in_line = nodes_in_line
         self.nodes = nodes
