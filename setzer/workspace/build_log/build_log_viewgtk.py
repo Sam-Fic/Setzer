@@ -34,7 +34,7 @@ class BuildLogView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.get_style_context().add_class('buildlog')
+        self.add_css_class('buildlog')
 
         self.list = BuildLogList(self)
 
@@ -42,8 +42,8 @@ class BuildLogView(Gtk.Box):
         self.scrolled_window.set_vexpand(True)
         self.scrolled_window.set_child(self.list)
 
-        self.close_button = Gtk.Button.new_from_icon_name('window-close-symbolic')
-        self.close_button.get_style_context().add_class('flat')
+        self.close_button = Gtk.Button(icon_name='window-close-symbolic')
+        self.close_button.add_css_class('flat')
         self.close_button.set_can_focus(False)
         self.close_button.set_action_name('win.close-build-log')
 
@@ -53,7 +53,7 @@ class BuildLogView(Gtk.Box):
         self.header_label.set_margin_start(0)
         self.header_label.set_hexpand(True)        
 
-        self.header = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.header.append(self.header_label)
         self.header.append(self.close_button)
 

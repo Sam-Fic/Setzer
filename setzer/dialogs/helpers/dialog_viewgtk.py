@@ -34,7 +34,7 @@ class DialogView(Gtk.Window):
         self.headerbar = Gtk.HeaderBar()
         self.set_titlebar(self.headerbar)
 
-        self.topbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.topbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.set_child(self.topbox)
 
         self.shortcuts_controller = ShortcutController()

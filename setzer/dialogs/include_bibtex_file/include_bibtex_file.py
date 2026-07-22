@@ -98,8 +98,8 @@ class IncludeBibTeXFile(object):
         for name in self.style_names:
             style = name.lower()
             self.view.style_buttons[style] = Gtk.ToggleButton()
-            box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            box.append(Gtk.Label.new(name))
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            box.append(Gtk.Label(label=name))
             box.set_margin_end(6)
             box.set_margin_start(4)
             self.view.style_buttons[style].set_child(box)
@@ -117,8 +117,8 @@ class IncludeBibTeXFile(object):
         for name in self.natbib_style_names:
             style = name.lower()
             self.view.natbib_style_buttons[style] = Gtk.ToggleButton()
-            box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            box.append(Gtk.Label.new(name))
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            box.append(Gtk.Label(label=name))
             box.set_margin_end(6)
             box.set_margin_start(4)
             self.view.natbib_style_buttons[style].set_child(box)

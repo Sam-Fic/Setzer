@@ -129,7 +129,7 @@ class AddRemovePackagesDialog(object):
             self.view.remove_list.select_row(new_row)
 
     def add_to_list(self, listbox, label_text):
-        label = Gtk.Label.new(label_text)
+        label = Gtk.Label(label=label_text)
         label.set_xalign(0)
         row = Gtk.ListBoxRow()
         row.set_child(label)

@@ -30,7 +30,7 @@ class PopoverMenu(Gtk.Popover):
         stack = Gtk.Stack()
         stack.set_vhomogeneous(False)
 
-        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         stack.add_named(box, 'main')
 
         self.set_child(stack)
@@ -38,17 +38,17 @@ class PopoverMenu(Gtk.Popover):
         self.connect('closed', self.on_close)
 
     def add_page(self, pagename, label):
-        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
         button = Gtk.Button()
         button_box = Gtk.CenterBox()
         button_box.set_orientation(Gtk.Orientation.HORIZONTAL)
         button.set_child(button_box)
-        button.get_style_context().add_class('header')
+        button.add_css_class('header')
         button.connect('clicked', self.show_page, 'main', Gtk.StackTransitionType.SLIDE_LEFT)
 
-        button_box.set_center_widget(Gtk.Label.new(label))
-        button_box.set_start_widget(Gtk.Image.new_from_icon_name('pan-start-symbolic'))
+        button_box.set_center_widget(Gtk.Label(label=label))
+        button_box.set_start_widget(Gtk.Image(icon_name='pan-start-symbolic'))
         box.append(button)
 
         self.get_child().add_named(box, pagename)
@@ -73,24 +73,24 @@ class MenuBuilder():
 
     def create_button(label, icon_name=None, shortcut=None):
         button = Gtk.Button()
-        button_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        button_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         button.set_child(button_box)
-        button.get_style_context().add_class('action')
+        button.add_css_class('action')
 
         if icon_name == 'placeholder':
             icon = Gtk.DrawingArea()
             icon.set_size_request(24, 16)
             button_box.append(icon)
         elif icon_name != None:
-            icon = Gtk.Image.new_from_icon_name(icon_name)
-            icon.get_style_context().add_class('icon')
+            icon = Gtk.Image(icon_name=icon_name)
+            icon.add_css_class('icon')
             button_box.append(icon)
 
-        button_box.append(Gtk.Label.new(label))
+        button_box.append(Gtk.Label(label=label))
 
         if shortcut != None:
-            shortcut_label = Gtk.Label.new(shortcut)
-            shortcut_label.get_style_context().add_class('shortcut')
+            shortcut_label = Gtk.Label(label=shortcut)
+            shortcut_label.add_css_class('shortcut')
             shortcut_label.set_xalign(1)
             shortcut_label.set_hexpand(True)
             button_box.append(shortcut_label)
@@ -102,10 +102,10 @@ class MenuBuilder():
         button_box = Gtk.CenterBox()
         button_box.set_orientation(Gtk.Orientation.HORIZONTAL)
         button.set_child(button_box)
-        button.get_style_context().add_class('menu')
+        button.add_css_class('menu')
 
-        button_box.set_start_widget(Gtk.Label.new(label))
-        button_box.set_end_widget(Gtk.Image.new_from_icon_name('pan-end-symbolic'))
+        button_box.set_start_widget(Gtk.Label(label=label))
+        button_box.set_end_widget(Gtk.Image(icon_name='pan-end-symbolic'))
 
         return button
 

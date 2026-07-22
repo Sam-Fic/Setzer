@@ -39,7 +39,7 @@ class BibliographyMenuView(Popover):
 
         self.add_action_button('main', _('Include BibTeX File') + '...', 'win.include-bibtex-file')
         self.add_action_button('main', _('Include \'natbib\' Package'), 'win.add-packages', GLib.Variant('as', ['natbib']))
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_insert_symbol_item('main', _('Citation'), ['\\cite{•}'])
         self.add_insert_symbol_item('main', _('Citation with Page Number'), ['\\cite[•]{•}'])
         self.add_menu_button(_('Natbib Citations'), 'natbib_citations')
@@ -53,7 +53,7 @@ class BibliographyMenuView(Popover):
         self.add_insert_symbol_item('natbib_citations', _('Detailed with Brackets'), ['\\citep*{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Alternative 1'), ['\\citealt{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Alternative 2'), ['\\citealp{•}'])
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 'natbib_citations')
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), 'natbib_citations')
         self.add_insert_symbol_item('natbib_citations', _('Cite Author'), ['\\citeauthor{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Cite Author Detailed'), ['\\citeauthor*{•}'])
         self.add_insert_symbol_item('natbib_citations', _('Cite Year'), ['\\citeyear{•}'])

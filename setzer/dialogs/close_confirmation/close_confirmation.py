@@ -6,19 +6,21 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
+gi.require_version('Adw', '1')
+from gi.repository import Adw
 
 import os.path
 
@@ -40,16 +42,20 @@ class CloseConfirmationDialog(object):
         self.view.choose(self.main_window, None, self.dialog_process_response)
 
     def setup(self, document):
-        self.view = Gtk.AlertDialog()
-        self.view.set_modal(True)
-        self.view.set_message(_('Document »{document}« has unsaved changes.').format(document=document.get_displayname()))
-        self.view.set_detail(_('If you close without saving, these changes will be lost.'))
-        self.view.set_buttons([_('Close _without Saving'), _('_Cancel'), _('_Save')])
-        self.view.set_cancel_button(1)
-        self.view.set_default_button(2)
+        self.view = Adw.AlertDialog(
+            heading=_('Document »{document}« has unsaved changes.').format(document=document.get_displayname()),
+            body=_('If you close without saving, these changes will be lost.'))
+        self.view.add_response('discard', _('Close without Saving'))
+        self.view.add_response('cancel', _('Cancel'))
+        self.view.add_response('save', _('Save'))
+        self.view.set_response_appearance('discard', Adw.ResponseAppearance.DESTRUCTIVE)
+        self.view.set_response_appearance('save', Adw.ResponseAppearance.SUGGESTED)
+        self.view.set_default_response('cancel')
+        self.view.set_close_response('cancel')
 
     def dialog_process_response(self, dialog, result):
-        self.parameters['response'] = dialog.choose_finish(result)
+        response_id = dialog.choose_finish(result)
+        # 映射回原数字语义，保持调用方契约兼容：
+        # discard -> 0, cancel -> 1, save -> 2
+        self.parameters['response'] = {'discard': 0, 'cancel': 1, 'save': 2}.get(response_id, 1)
         self.callback(self.parameters)
-
-

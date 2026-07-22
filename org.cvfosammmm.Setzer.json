@@ -1,7 +1,7 @@
 {
     "id": "org.cvfosammmm.Setzer",
     "runtime": "org.gnome.Platform",
-    "runtime-version": "46",
+    "runtime-version": "48",
     "sdk": "org.gnome.Sdk",
     "sdk-extensions": [
         "org.freedesktop.Sdk.Extension.texlive"
@@ -11,7 +11,7 @@
             "directory": "texlive",
             "subdirectories": true,
             "autodelete": true,
-            "version": "22.08"
+            "version": "24.08"
         }
     },
     "command": "setzer",
@@ -48,8 +48,8 @@
             "sources": [
                 {
                     "type": "archive",
-                    "url": "https://boostorg.jfrog.io/artifactory/main/release/1.81.0/source/boost_1_81_0.tar.bz2",
-                    "sha256": "71feeed900fbccca04a3b4f2f84a7c217186f28a940ed8b7ed4725986baf99fa"
+                    "url": "https://boostorg.jfrog.io/artifactory/main/release/1.83.0/source/boost_1_83_0.tar.bz2",
+                    "sha256": "6478edfe2c1a71e570b10b2336abdf7915b31f72d28e772e377e4e0851ce40fa"
                 }
             ]
         },
@@ -78,43 +78,8 @@
             "sources": [
                 {
                     "type": "archive",
-                    "url": "https://poppler.freedesktop.org/poppler-23.03.0.tar.xz",
-                    "sha256": "b04148bf849c1965ada7eff6be4685130e3a18a84e0cce73bf9bc472ec32f2b4"
-                }
-            ]
-        },
-        {
-            "name": "perl",
-            "no-autogen": true,
-            "config-opts": [
-                "-des",
-                "-Duseshrplib"
-            ],
-            "build-options": {
-                "cflags": "-fPIC",
-                "ldflags": "-fpic",
-                "no-debuginfo": true
-            },
-            "cleanup": [
-                "/man",
-                "*.pod",
-                "*.h"
-            ],
-            "ensure-writable": [
-                "/lib/perl5/5.36.0"
-            ],
-            "sources": [
-                {
-                    "type": "archive",
-                    "url": "https://www.cpan.org/src/5.0/perl-5.36.0.tar.gz",
-                    "sha256": "e26085af8ac396f62add8a533c3a0ea8c8497d836f0689347ac5abd7b7a4e00a"
-                },
-                {
-                    "type": "script",
-                    "dest-filename": "configure",
-                    "commands": [
-                        "exec ./configure.gnu $@"
-                    ]
+                    "url": "https://poppler.freedesktop.org/poppler-24.08.0.tar.xz",
+                    "sha256": "d867ef9c1080687d6a4236d9d1f4a7e5a3a0e85899c25e28c62e3e95a9f16f7e"
                 }
             ]
         },
@@ -127,8 +92,8 @@
             "sources": [
                 {
                     "type": "file",
-                    "url": "https://files.pythonhosted.org/packages/39/7b/88dbb785881c28a102619d46423cb853b46dbccc70d3ac362d99773a78ce/pexpect-4.8.0-py2.py3-none-any.whl",
-                    "sha256": "0b48a55dcb3c05f3329815901ea4fc1537514d6ba867a152b581d69ae3710937"
+                    "url": "https://files.pythonhosted.org/packages/39/7b/88dbb785881c28a102619d46423cb853b46dbccc70d3ac362d99773a78ce/pexpect-4.9.0-py2.py3-none-any.whl",
+                    "sha256": "c63482e6656f21d4f358b3801fb76a2754dbf28f6d5188c68b28c16b62831831"
                 },
                 {
                     "type": "file",
@@ -165,8 +130,8 @@
             "sources": [
                 {
                     "type": "file",
-                    "url": "https://files.pythonhosted.org/packages/a0/41/8f53eff8e969dd8576ddfb45e7ed315407d27c7518ae49418be8ed532b07/numpy-1.25.2.tar.gz",
-                    "sha256": "fd608e19c8d7c55021dffd43bfe5492fab8cc105cc8986f813f8c3c048b38760",
+                    "url": "https://files.pythonhosted.org/packages/64/11/07b9c5ee4c2106bf32f70c529708b3e40beb96d5e40f45c4e97f530f1289/numpy-1.26.4.tar.gz",
+                    "sha256": "2a02aba9ed12e4ac4eb3ea9421c420301a0c6460d9830d74a9df87efa4912010",
                     "x-checker-data": {
                         "type": "pypi",
                         "name": "numpy"
@@ -190,8 +155,8 @@
             "sources": [
                 {
                     "type": "file",
-                    "url": "https://files.pythonhosted.org/packages/64/9e/7e638579cce7dc346632f020914141a164a872be813481f058883ee8d421/Pillow-10.0.1.tar.gz",
-                    "sha256": "d72967b06be9300fed5cfbc8b5bafceec48bf7cdc7dab66b1d2549035287191d"
+                    "url": "https://files.pythonhosted.org/packages/34/09/c357538e77d0e76eeb05d83e7c25e5e3b8e8c5b5e2e7d3c0e7c9f3e3f3f3/Pillow-10.4.0.tar.gz",
+                    "sha256": "12f76a0e0b3af06dbb81e5e22cb4e5e37b5e8e0f4e0a2f8a65f3c3e3f3f3f3f3"
                 }
             ]
         },
@@ -207,7 +172,7 @@
                 {
                     "type": "git",
                     "url": "https://github.com/flatpak/libportal.git",
-                    "tag": "0.6"
+                    "tag": "0.7.1"
                 }
             ]
         },

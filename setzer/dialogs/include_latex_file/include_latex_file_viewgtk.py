@@ -33,9 +33,9 @@ class IncludeLaTeXFileView(DialogView):
 
         self.set_default_size(400, -1)
         self.set_can_focus(False)
-        self.get_style_context().add_class('include-latex-file-dialog')
+        self.add_css_class('include-latex-file-dialog')
         self.headerbar.set_show_title_buttons(False)
-        self.headerbar.set_title_widget(Gtk.Label.new(_('Include LaTeX file')))
+        self.headerbar.set_title_widget(Gtk.Label(label=_('Include LaTeX file')))
         self.topbox.set_size_request(400, -1)
 
         self.cancel_button = Gtk.Button.new_with_mnemonic(_('_Cancel'))
@@ -44,16 +44,16 @@ class IncludeLaTeXFileView(DialogView):
 
         self.include_button = Gtk.Button.new_with_mnemonic(_('_Include'))
         self.include_button.set_can_focus(False)
-        self.include_button.get_style_context().add_class('suggested-action')
+        self.include_button.add_css_class('suggested-action')
         self.headerbar.pack_end(self.include_button)
 
-        self.content = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.content.set_vexpand(True)
         self.content.set_margin_start(18)
         self.content.set_margin_end(18)
         self.topbox.append(self.content)
 
-        label = Gtk.Label.new(_('LaTeX file to include'))
+        label = Gtk.Label(label=_('LaTeX file to include'))
         label.set_xalign(0)
         label.set_margin_bottom(3)
         label.set_margin_top(18)
@@ -62,20 +62,20 @@ class IncludeLaTeXFileView(DialogView):
         self.file_chooser_button.set_title(_('Select a LaTeX File'))
         self.content.append(self.file_chooser_button.view)
 
-        label = Gtk.Label.new(_('Type of path to included file'))
+        label = Gtk.Label(label=_('Type of path to included file'))
         label.set_xalign(0)
         label.set_margin_bottom(3)
         label.set_margin_top(18)
         self.content.append(label)
 
-        self.pathtype_switcher = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.pathtype_switcher.get_style_context().add_class('linked')
+        self.pathtype_switcher = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.pathtype_switcher.add_css_class('linked')
         self.pathtype_buttons = dict()
 
         self.pathtype_info_button = Gtk.ToggleButton()
-        self.pathtype_info_button.set_child(Gtk.Image.new_from_icon_name('dialog-information-symbolic'))
-        self.pathtype_info_button.get_style_context().add_class('circular')
-        self.pathtype_info_button.get_style_context().add_class('flat')
+        self.pathtype_info_button.set_child(Gtk.Image(icon_name='dialog-information-symbolic'))
+        self.pathtype_info_button.add_css_class('circular')
+        self.pathtype_info_button.add_css_class('flat')
 
         box = Gtk.CenterBox()
         box.set_orientation(Gtk.Orientation.HORIZONTAL)

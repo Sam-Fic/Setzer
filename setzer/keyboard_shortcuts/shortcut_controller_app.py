@@ -64,11 +64,11 @@ class ShortcutControllerApp(ShortcutController):
 
     def shortcut_show_document_chooser(self):
         if self.main_window.headerbar.open_document_button.get_sensitive():
-            PopoverManager.popup_at_button('open_document')
+            PopoverManager.get_popover('open_document').view.popover.popup()
 
     def shortcut_show_open_docs(self):
         if self.main_window.headerbar.center_button.get_sensitive():
-            PopoverManager.popup_at_button('document_switcher')
+            PopoverManager.get_popover('document_switcher').view.popover.popup()
 
     def shortcut_switch_document(self):
         self.workspace.switch_to_earliest_open_document()
@@ -102,7 +102,7 @@ class ShortcutControllerApp(ShortcutController):
         return True
 
     def shortcut_show_hamburger(self, accel_group=None, window=None, key=None, mask=None):
-        PopoverManager.popup_at_button('hamburger_menu')
+        self.main_window.headerbar.menu_button.popup()
         return True
 
 

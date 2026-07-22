@@ -38,18 +38,18 @@ class MathMenuView(Popover):
         self.set_width(288)
 
         self.add_action_button('main', _('Include AMS Packages'), 'win.add-packages', GLib.Variant('as', ['amsmath', 'amssymb', 'amsfonts', 'amsthm']))
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_before_after_item('main', _('Inline Math Section') + ' ($ ... $)', ['$ ', ' $'], shortcut=_('Ctrl') + '+M')
         self.add_before_after_item('main', _('Display Math Section') + ' (\\[ ... \\])', ['\\[ ', ' \\]'], shortcut=_('Shift') + '+Ctrl' + '+M')
         self.add_menu_button(_('Math Environments'), 'math_environments')
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_before_after_item('main', _('Subscript') + ' (_{})', ['_{', '}'], shortcut=_('Shift') + '+' + _('Ctrl') + '+D')
         self.add_before_after_item('main', _('Superscript') + ' (^{})', ['^{', '}'], shortcut=_('Shift') + '+' + _('Ctrl') + '+U')
         self.add_insert_symbol_item('main', _('Fraction') + ' (\\frac)', ['\\frac{•}{•}'], shortcut=_('Shift') + '+Alt' + '+F')
         self.add_before_after_item('main', _('Square Root') + ' (\\sqrt)', ['\\sqrt{', '}'])
         self.add_insert_symbol_item('main', '\\left', ['\\left •'], shortcut=_('Shift') + '+' + _('Ctrl') + '+L')
         self.add_insert_symbol_item('main', '\\right', ['\\right •'], shortcut=_('Shift') + '+' + _('Ctrl') + '+R')
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_menu_button(_('Math Functions'), 'math_functions')
         self.add_menu_button(_('Math Font Styles'), 'math_font_styles')
         self.add_menu_button(_('Math Stacking Symbols'), 'math_stacking_symbols')
@@ -74,8 +74,8 @@ class MathMenuView(Popover):
 
         # submenu: math functions
         self.add_page('math_functions', _('Math Functions'))
-        hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         vbox.set_hexpand(True)
         for math_function in ['arccos', 'arcsin', 'arctan', 'cos', 'cosh', 'cot', 'coth', 'csc', 'deg', 'det', 'dim', 'exp', 'gcd', 'hom', 'inf']:
             button = MenuBuilder.create_button('\\' + math_function)
@@ -85,7 +85,7 @@ class MathMenuView(Popover):
             self.register_button_for_keyboard_navigation(button, pagename='math_functions')
             vbox.append(button)
         hbox.append(vbox)
-        vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         vbox.set_hexpand(True)
         for math_function in ['ker', 'lg', 'lim', 'liminf', 'limsup', 'ln', 'log', 'max', 'min', 'sec', 'sin', 'sinh', 'sup', 'tan', 'tanh']:
             button = MenuBuilder.create_button('\\' + math_function)
@@ -119,7 +119,7 @@ class MathMenuView(Popover):
         self.add_before_after_item('math_stacking_symbols', '\\stackrel{}{}', ['\\stackrel{•}{', '}'])
         self.add_before_after_item('math_stacking_symbols', '\\overset{}{}', ['\\overset{•}{', '}'])
         self.add_before_after_item('math_stacking_symbols', '\\underset{}{}', ['\\underset{•}{', '}'])
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL), 'math_stacking_symbols')
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL), 'math_stacking_symbols')
         self.add_before_after_item('math_stacking_symbols', 'cases', ['\\begin{cases}\n\t', '\n\\end{cases}'])
         self.add_before_after_item('math_stacking_symbols', 'split', ['\\begin{split}\n\t', '\n\\end{split}'])
 

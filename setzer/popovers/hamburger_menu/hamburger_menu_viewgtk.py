@@ -38,17 +38,17 @@ class HamburgerMenuView(Popover):
         self.button_save_all.set_action_name('win.save-all')
         self.add_closing_button(self.button_save_all)
 
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         self.add_menu_button(_('Session'), 'session')
 
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         self.button_preferences = MenuBuilder.create_button(_('Preferences'))
         self.button_preferences.set_action_name('win.show-preferences-dialog')
         self.add_closing_button(self.button_preferences)
 
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         self.button_shortcuts = MenuBuilder.create_button(_('Keyboard Shortcuts'), shortcut=_('Ctrl') + '+?')
         self.button_shortcuts.set_action_name('win.show-shortcuts-dialog')
@@ -58,7 +58,7 @@ class HamburgerMenuView(Popover):
         self.button_about.set_action_name('win.show-about-dialog')
         self.add_closing_button(self.button_about)
 
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         self.button_close_all = MenuBuilder.create_button(_('Close All Documents'))
         self.button_close_all.set_action_name('win.close-all-documents')
@@ -75,9 +75,9 @@ class HamburgerMenuView(Popover):
         # session submenu
         self.add_page('session', _('Session'))
 
-        self.session_explaination = Gtk.Label.new(_('Save the list of open documents in a session file\nand restore it later, a convenient way to work\non multiple projects.'))
+        self.session_explaination = Gtk.Label(label=_('Save the list of open documents in a session file\nand restore it later, a convenient way to work\non multiple projects.'))
         self.session_explaination.set_xalign(0)
-        self.session_explaination.get_style_context().add_class('explaination')
+        self.session_explaination.add_css_class('explaination')
         self.session_explaination.set_margin_top(8)
         self.session_explaination.set_margin_bottom(11)
 
@@ -88,7 +88,7 @@ class HamburgerMenuView(Popover):
         self.session_box_separator = Gtk.Separator()
         self.session_box_separator.set_visible(False)
 
-        self.prev_sessions_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.prev_sessions_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
 
         self.add_widget(self.session_explaination, pagename='session')
         self.add_widget(self.button_restore_session, pagename='session')

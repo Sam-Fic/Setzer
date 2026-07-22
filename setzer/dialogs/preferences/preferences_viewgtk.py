@@ -17,25 +17,12 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
-from gi.repository import Gdk
-
-from setzer.dialogs.helpers.dialog_viewgtk import DialogView
+gi.require_version('Adw', '1')
+from gi.repository import Gtk, Adw
 
 
-class Preferences(DialogView):
+class Preferences(Adw.PreferencesDialog):
 
-    def __init__(self, main_window):
-        DialogView.__init__(self, main_window)
-
-        self.set_can_focus(False)
-        self.set_size_request(400, 250)
-        self.set_default_size(400, 250)
-        self.headerbar.set_title_widget(Gtk.Label.new(_('Preferences')))
-
-        self.notebook = Gtk.Notebook()
-        self.notebook.set_show_tabs(True)
-        self.notebook.set_vexpand(True)
-        self.topbox.append(self.notebook)
-
-
+    def __init__(self):
+        Adw.PreferencesDialog.__init__(self)
+        self.set_title(_('Preferences'))

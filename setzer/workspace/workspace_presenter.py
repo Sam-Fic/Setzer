@@ -15,6 +15,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
+from gi.repository import Gio
+
 from setzer.app.service_locator import ServiceLocator
 from setzer.app.font_manager import FontManager
 
@@ -140,9 +142,8 @@ class WorkspacePresenter(object):
         FontManager.propagate_font_setting()
 
     def update_colors(self):
-        name = self.settings.get_value('preferences', 'color_scheme')
-        path = os.path.join(ServiceLocator.get_resources_path(), 'themes', name + '.css')
-        self.main_window.css_provider_colors.load_from_path(path)
+        # 自定义主题系统已移除，改为跟随系统 Libadwaita 调色板。
+        # 自绘控件通过 ColorManager 的内置色回退取色。
         try: self.workspace.help_panel.update_colors()
         except AttributeError: pass
 

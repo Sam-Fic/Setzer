@@ -31,15 +31,15 @@ class AddRemovePackagesDialogView(DialogView):
 
         self.set_default_size(650, -1)
         self.set_can_focus(False)
-        self.headerbar.set_title_widget(Gtk.Label.new(_('Add / Remove Packages')))
+        self.headerbar.set_title_widget(Gtk.Label(label=_('Add / Remove Packages')))
         self.topbox.set_size_request(650, -1)
 
         self.create_add_box()
         self.create_remove_box()
 
     def create_add_box(self):
-        self.add_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.add_box.get_style_context().add_class('add-remove-packages-add-box')
+        self.add_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.add_box.add_css_class('add-remove-packages-add-box')
 
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_size_request(300, 146)
@@ -51,8 +51,8 @@ class AddRemovePackagesDialogView(DialogView):
         self.add_list.set_sort_func(self.sort_function)
         self.scrolled_window.set_child(self.add_list)
 
-        self.add_details = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.add_description = Gtk.Label.new('')
+        self.add_details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.add_description = Gtk.Label(label='')
         self.add_description.set_yalign(0)
         self.add_description.set_xalign(0)
         self.add_description.set_size_request(300, 110)
@@ -61,9 +61,9 @@ class AddRemovePackagesDialogView(DialogView):
         self.add_details.append(self.add_description)
         self.add_button = Gtk.Button()
         self.add_button.set_label(_('Add Package'))
-        add_button_wrapper = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        add_button_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         add_button_wrapper.append(self.add_button)
-        self.add_button.get_style_context().add_class('suggested-action')
+        self.add_button.add_css_class('suggested-action')
         self.add_details.append(add_button_wrapper)
         
         self.add_box.append(self.scrolled_window)
@@ -72,12 +72,12 @@ class AddRemovePackagesDialogView(DialogView):
         self.topbox.append(self.add_box)
 
     def create_remove_box(self):
-        self.remove_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.remove_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.remove_box.set_margin_top(18)
         self.remove_box.set_margin_bottom(18)
         self.remove_box.set_margin_start(18)
         self.remove_box.set_margin_end(18)
-        self.remove_box.get_style_context().add_class('add-remove-packages-remove-box')
+        self.remove_box.add_css_class('add-remove-packages-remove-box')
 
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_size_request(300, 146)
@@ -89,8 +89,8 @@ class AddRemovePackagesDialogView(DialogView):
         self.remove_list.set_sort_func(self.sort_function)
         self.scrolled_window.set_child(self.remove_list)
 
-        self.remove_details = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.remove_description = Gtk.Label.new('')
+        self.remove_details = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.remove_description = Gtk.Label(label='')
         self.remove_description.set_yalign(0)
         self.remove_description.set_xalign(0)
         self.remove_description.set_size_request(300, 110)
@@ -99,7 +99,7 @@ class AddRemovePackagesDialogView(DialogView):
         self.remove_details.append(self.remove_description)
         self.remove_button = Gtk.Button()
         self.remove_button.set_label(_('Remove Package'))
-        remove_button_wrapper = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        remove_button_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         remove_button_wrapper.append(self.remove_button)
         self.remove_details.append(remove_button_wrapper)
         

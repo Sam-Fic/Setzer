@@ -105,7 +105,7 @@ class SymbolsPage(object):
             symbol = [attrib['file'].rsplit('.')[0], attrib['command'], attrib.get('package', None), int(attrib.get('original_width', 10)), int(attrib.get('original_height', 10))]
             size = max(symbol[3], symbol[4])
 
-            image = Gtk.Image.new_from_icon_name('sidebar-' + symbol[0] + '-symbolic')
+            image = Gtk.Image(icon_name='sidebar-' + symbol[0] + '-symbolic')
             image.set_pixel_size(int(size * 1.5))
             tooltip_text = symbol[1]
             if symbol[2] != None: 
@@ -147,14 +147,14 @@ class SymbolsPage(object):
     def update_labels(self):
         offset = self.view.symbols_view_recent.get_allocated_height() + self.view.tabs.get_allocated_height() + 1
         scrolling_offset = self.view.scrolled_window.get_vadjustment().get_value()
-        self.view.tabs_box.get_style_context().remove_class('no-border')
+        self.view.tabs_box.remove_css_class('no-border')
         for key, symbols_view in enumerate(self.view.symbols_views):
             label = self.view.labels[key]
             placeholder = self.view.placeholders[len(self.view.symbols_views) - key - 1]
             margin_top = max(0, offset - int(scrolling_offset))
             label.set_margin_top(margin_top)
             if margin_top > 1 and margin_top <= label.get_allocated_height():
-                self.view.tabs_box.get_style_context().add_class('no-border')
+                self.view.tabs_box.add_css_class('no-border')
             if len(symbols_view.visible_symbols) > 0:
                 offset += symbols_view.get_allocated_height() + self.view.tabs.get_allocated_height()
 
@@ -256,9 +256,9 @@ class SymbolsPage(object):
             self.update_borders(symbols_view, symbols_view.get_allocated_width())
 
         if any_symbols_found:
-            self.view.search_entry.get_style_context().remove_class('error')
+            self.view.search_entry.remove_css_class('error')
         else:
-            self.view.search_entry.get_style_context().add_class('error')
+            self.view.search_entry.add_css_class('error')
 
     def on_symbols_view_size_allocate(self, *arguments):
         for symbols_view in self.view.symbols_views:
@@ -274,12 +274,12 @@ class SymbolsPage(object):
 
             for number, recent_symbol in enumerate(self.recent_details):
                 image = recent_symbol[5]
-                image.get_style_context().remove_class('no_right_border')
+                image.remove_css_class('no_right_border')
 
             for offset in range(max(0, allocation.height) // 20 + 1):
                 widget = view.get_child_at_pos(allocation.width - 1, offset * 20)
                 if widget != None:
-                    widget.get_child().get_style_context().add_class('no_right_border')
+                    widget.get_child().add_css_class('no_right_border')
 
     def update_borders(self, symbols_view, width_available):
         width_with_border = symbols_view.symbol_width + 11
@@ -290,9 +290,9 @@ class SymbolsPage(object):
 
         for number, image in enumerate(symbols_view.visible_symbols):
             if (number % symbols_per_line) == symbols_per_line - 1:
-                image[5].get_style_context().add_class('no_right_border')
+                image[5].add_css_class('no_right_border')
             else:
-                image[5].get_style_context().remove_class('no_right_border')
+                image[5].remove_css_class('no_right_border')
 
     def scroll_view(self, position, duration=0.2):
         adjustment = self.view.scrolled_window.get_vadjustment()

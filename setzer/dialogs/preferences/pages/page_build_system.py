@@ -6,24 +6,29 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
 
 import gi
 gi.require_version('Gtk', '4.0')
+gi.require_version('Adw', '1')
 gi.require_version('Xdp', '1.0')
-from gi.repository import Gtk, Xdp
+from gi.repository import Gtk, Adw, Xdp
 
-import subprocess, os
+import subprocess
 
 
 class PageBuildSystem(object):
+
+    autoshow_values = ['errors', 'errors_warnings', 'all']
+    shell_values = ['disable', 'restricted', 'enable']
 
     def __init__(self, preferences, settings):
         self.view = PageBuildSystemView()
@@ -34,30 +39,49 @@ class PageBuildSystem(object):
 
     def init(self):
         self.view.option_cleanup_build_files.set_active(self.settings.get_value('preferences', 'cleanup_build_files'))
-        self.view.option_cleanup_build_files.connect('toggled', self.preferences.on_check_button_toggle, 'cleanup_build_files')
+        self.view.option_cleanup_build_files.connect('notify::active', self.on_switch_toggled, 'cleanup_build_files')
 
-        self.view.option_autoshow_build_log_errors.set_active(self.settings.get_value('preferences', 'autoshow_build_log') == 'errors')
-        self.view.option_autoshow_build_log_errors_warnings.set_active(self.settings.get_value('preferences', 'autoshow_build_log') == 'errors_warnings')
-        self.view.option_autoshow_build_log_all.set_active(self.settings.get_value('preferences', 'autoshow_build_log') == 'all')
+        # LaTeX interpreter combo
+        self.view.option_latex_interpreter.connect('notify::selected', self.on_interpreter_selected)
 
-        self.view.option_autoshow_build_log_errors.connect('toggled', self.preferences.on_radio_button_toggle, 'autoshow_build_log', 'errors')
-        self.view.option_autoshow_build_log_errors_warnings.connect('toggled', self.preferences.on_radio_button_toggle, 'autoshow_build_log', 'errors_warnings')
-        self.view.option_autoshow_build_log_all.connect('toggled', self.preferences.on_radio_button_toggle, 'autoshow_build_log', 'all')
+        # Automatically show build log combo
+        self.view.option_autoshow_build_log.set_selected(
+            self.autoshow_values.index(self.settings.get_value('preferences', 'autoshow_build_log')))
+        self.view.option_autoshow_build_log.connect('notify::selected', self.on_autoshow_selected)
 
-        self.view.option_system_commands_disable.set_active(self.settings.get_value('preferences', 'build_option_system_commands') == 'disable')
-        self.view.option_system_commands_restricted.set_active(self.settings.get_value('preferences', 'build_option_system_commands') == 'restricted')
-        self.view.option_system_commands_full.set_active(self.settings.get_value('preferences', 'build_option_system_commands') == 'enable')
-
-        self.view.option_system_commands_disable.connect('toggled', self.preferences.on_radio_button_toggle, 'build_option_system_commands', 'disable')
-        self.view.option_system_commands_restricted.connect('toggled', self.preferences.on_radio_button_toggle, 'build_option_system_commands', 'restricted')
-        self.view.option_system_commands_full.connect('toggled', self.preferences.on_radio_button_toggle, 'build_option_system_commands', 'enable')
+        # Embedded system commands combo
+        self.view.option_system_commands.set_selected(
+            self.shell_values.index(self.settings.get_value('preferences', 'build_option_system_commands')))
+        self.view.option_system_commands.connect('notify::selected', self.on_shell_selected)
 
         self.setup_latex_interpreters()
+
+    def on_switch_toggled(self, switch, pspec, preference_name):
+        self.settings.set_value('preferences', preference_name, switch.get_active())
+
+    def on_interpreter_selected(self, combo, pspec):
+        selected = combo.get_selected()
+        if selected == Gtk.INVALID_LIST_POSITION:
+            return
+        interpreter = self.latex_interpreters[selected]
+        self.settings.set_value('preferences', 'latex_interpreter', interpreter)
+        self.update_tectonic_element_visibility()
+
+    def on_autoshow_selected(self, combo, pspec):
+        selected = combo.get_selected()
+        if selected == Gtk.INVALID_LIST_POSITION:
+            return
+        self.settings.set_value('preferences', 'autoshow_build_log', self.autoshow_values[selected])
+
+    def on_shell_selected(self, combo, pspec):
+        selected = combo.get_selected()
+        if selected == Gtk.INVALID_LIST_POSITION:
+            return
+        self.settings.set_value('preferences', 'build_option_system_commands', self.shell_values[selected])
 
     def setup_latex_interpreters(self):
         self.latex_interpreters = list()
         for interpreter in ['xelatex', 'pdflatex', 'lualatex', 'tectonic']:
-            self.view.option_latex_interpreter[interpreter].set_visible(False)
             arguments = [interpreter, '--version']
             try:
                 process = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -81,8 +105,10 @@ class PageBuildSystem(object):
 
         if len(self.latex_interpreters) == 0:
             self.view.no_interpreter_label.set_visible(True)
+            self.view.option_latex_interpreter.set_visible(False)
         else:
             self.view.no_interpreter_label.set_visible(False)
+            self.view.option_latex_interpreter.set_visible(True)
             if self.settings.get_value('preferences', 'latex_interpreter') not in self.latex_interpreters:
                 self.settings.set_value('preferences', 'latex_interpreter', self.latex_interpreters[0])
 
@@ -92,49 +118,42 @@ class PageBuildSystem(object):
                 self.view.option_use_latexmk.set_visible(False)
                 self.settings.set_value('preferences', 'use_latexmk', False)
             self.view.option_use_latexmk.set_active(self.settings.get_value('preferences', 'use_latexmk'))
-            self.view.option_use_latexmk.connect('toggled', self.preferences.on_check_button_toggle, 'use_latexmk')
+            self.view.option_use_latexmk.connect('notify::active', self.on_switch_toggled, 'use_latexmk')
 
-            for interpreter in self.view.option_latex_interpreter:
-                if interpreter in self.latex_interpreters:
-                    self.view.option_latex_interpreter[interpreter].set_visible(True)
-                    self.view.option_latex_interpreter[interpreter].set_active(interpreter == self.settings.get_value('preferences', 'latex_interpreter'))
-                    self.view.option_latex_interpreter[interpreter].connect('toggled', self.preferences.on_interpreter_changed, 'latex_interpreter', interpreter)
-                else:
-                    self.view.option_latex_interpreter[interpreter].set_visible(False)
+            # 填充 interpreter 下拉列表
+            string_list = Gtk.StringList()
+            for interpreter in self.latex_interpreters:
+                string_list.append(interpreter)
+            self.view.option_latex_interpreter.set_model(string_list)
+            current = self.settings.get_value('preferences', 'latex_interpreter')
+            self.view.option_latex_interpreter.set_selected(self.latex_interpreters.index(current))
 
-            self.view.option_latex_interpreter['tectonic'].connect('toggled', self.on_use_tectonic_toggled)
-        self.update_tectonic_element_visibility()
-
-    def on_use_tectonic_toggled(self, button):
-        self.update_tectonic_element_visibility()
+            self.update_tectonic_element_visibility()
 
     def update_tectonic_element_visibility(self):
-        if 'tectonic' in self.latex_interpreters and self.view.option_latex_interpreter['tectonic'].get_active():
+        selected = self.view.option_latex_interpreter.get_selected()
+        tectonic_active = (selected != Gtk.INVALID_LIST_POSITION and
+                           self.latex_interpreters[selected] == 'tectonic')
+        if tectonic_active:
             self.view.tectonic_warning_label.set_visible(True)
             self.view.option_use_latexmk.set_visible(False)
-            self.view.shell_escape_box.set_visible(False)
+            self.view.option_system_commands.set_visible(False)
         else:
             self.view.tectonic_warning_label.set_visible(False)
             self.view.option_use_latexmk.set_visible(True)
-            self.view.shell_escape_box.set_visible(True)
+            self.view.option_system_commands.set_visible(True)
 
-class PageBuildSystemView(Gtk.Box):
+
+class PageBuildSystemView(Adw.PreferencesPage):
 
     def __init__(self):
-        Gtk.Box.__init__(self)
-        self.set_orientation(Gtk.Orientation.VERTICAL)
+        Adw.PreferencesPage.__init__(self)
+        self.set_title(_('Build System'))
+        self.set_icon_name('system-run-symbolic')
 
-        self.set_margin_start(18)
-        self.set_margin_end(18)
-        self.set_margin_top(18)
-        self.set_margin_bottom(18)
-        self.get_style_context().add_class('preferences-page')
-
-        label = Gtk.Label()
-        label.set_markup('<b>' + _('LaTeX Interpreter') + '</b>')
-        label.set_xalign(0)
-        label.set_margin_bottom(6)
-        self.append(label)
+        group_interpreter = Adw.PreferencesGroup()
+        group_interpreter.set_title(_('LaTeX Interpreter'))
+        self.add(group_interpreter)
 
         self.no_interpreter_label = Gtk.Label()
         self.no_interpreter_label.set_wrap(True)
@@ -144,90 +163,62 @@ flatpak install org.freedesktop.Sdk.Extension.texlive'''))
         else:
             self.no_interpreter_label.set_markup(_('No LaTeX interpreter found. For instructions on installing LaTeX see <a href="https://en.wikibooks.org/wiki/LaTeX/Installation">https://en.wikibooks.org/wiki/LaTeX/Installation</a>'))
         self.no_interpreter_label.set_xalign(0)
-        self.no_interpreter_label.set_margin_bottom(6)
-        self.append(self.no_interpreter_label)
+        group_interpreter.add(self.no_interpreter_label)
 
-        self.option_latex_interpreter = dict()
-        self.option_latex_interpreter['xelatex'] = Gtk.CheckButton.new_with_label('XeLaTeX')
-        self.option_latex_interpreter['xelatex'].set_margin_end(12)
-        self.option_latex_interpreter['pdflatex'] = Gtk.CheckButton.new_with_label('PdfLaTeX')
-        self.option_latex_interpreter['pdflatex'].set_margin_end(12)
-        self.option_latex_interpreter['pdflatex'].set_group(self.option_latex_interpreter['xelatex'])
-        self.option_latex_interpreter['lualatex'] = Gtk.CheckButton.new_with_label('LuaLaTeX')
-        self.option_latex_interpreter['lualatex'].set_margin_end(12)
-        self.option_latex_interpreter['lualatex'].set_group(self.option_latex_interpreter['xelatex'])
-        self.option_latex_interpreter['tectonic'] = Gtk.CheckButton.new_with_label('Tectonic')
-        self.option_latex_interpreter['tectonic'].set_margin_end(12)
-        self.option_latex_interpreter['tectonic'].set_group(self.option_latex_interpreter['xelatex'])
-
-        self.hbox1 = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.hbox1.append(self.option_latex_interpreter['xelatex'])
-        self.hbox1.append(self.option_latex_interpreter['pdflatex'])
-        self.hbox1.append(self.option_latex_interpreter['lualatex'])
-        self.hbox1.append(self.option_latex_interpreter['tectonic'])
-        self.append(self.hbox1)
+        self.option_latex_interpreter = Adw.ComboRow()
+        self.option_latex_interpreter.set_title(_('Interpreter'))
+        group_interpreter.add(self.option_latex_interpreter)
 
         self.tectonic_warning_label = Gtk.Label()
         self.tectonic_warning_label.set_wrap(True)
         self.tectonic_warning_label.set_markup(_('Please note: the Tectonic backend uses only the V1 command-line interface. Tectonic.toml configuration files are ignored.'))
         self.tectonic_warning_label.set_xalign(0)
-        self.tectonic_warning_label.set_margin_top(6)
-        self.tectonic_warning_label.get_style_context().add_class('description')
+        self.tectonic_warning_label.add_css_class('caption')
+        group_interpreter.add(self.tectonic_warning_label)
 
-        self.append(self.tectonic_warning_label)
+        group_options = Adw.PreferencesGroup()
+        group_options.set_title(_('Options'))
+        self.add(group_options)
 
-        label = Gtk.Label()
-        label.set_markup('<b>' + _('Options') + '</b>')
-        label.set_xalign(0)
-        label.set_margin_top(18)
-        label.set_margin_bottom(6)
-        self.append(label)
-        self.option_cleanup_build_files = Gtk.CheckButton.new_with_label(_('Automatically remove helper files (.log, .dvi, …) after building .pdf.'))
-        self.append(self.option_cleanup_build_files)
+        self.option_cleanup_build_files = Adw.SwitchRow()
+        self.option_cleanup_build_files.set_title(_('Automatically remove helper files (.log, .dvi, …) after building .pdf.'))
+        group_options.add(self.option_cleanup_build_files)
 
-        self.option_use_latexmk = Gtk.CheckButton.new_with_label(_('Use Latexmk'))
-        self.append(self.option_use_latexmk)
+        self.option_use_latexmk = Adw.SwitchRow()
+        self.option_use_latexmk.set_title(_('Use Latexmk'))
+        group_options.add(self.option_use_latexmk)
 
-        label = Gtk.Label()
-        label.set_markup('<b>' + _('Automatically show build log ..') + ' </b>')
-        label.set_xalign(0)
-        label.set_margin_top(18)
-        label.set_margin_bottom(6)
-        self.append(label)
-        self.option_autoshow_build_log_errors = Gtk.CheckButton.new_with_label(_('.. only when errors occurred.'))
-        self.option_autoshow_build_log_errors_warnings = Gtk.CheckButton.new_with_label(_('.. on errors and warnings.'))
-        self.option_autoshow_build_log_errors_warnings.set_group(self.option_autoshow_build_log_errors)
-        self.option_autoshow_build_log_all = Gtk.CheckButton.new_with_label(_('.. on errors, warnings and badboxes.'))
-        self.option_autoshow_build_log_all.set_group(self.option_autoshow_build_log_errors)
-        self.append(self.option_autoshow_build_log_errors)
-        self.append(self.option_autoshow_build_log_errors_warnings)
-        self.append(self.option_autoshow_build_log_all)
+        group_build_log = Adw.PreferencesGroup()
+        group_build_log.set_title(_('Automatically show build log'))
+        self.add(group_build_log)
 
-        label_header = Gtk.Label()
-        label_header.set_markup('<b>' + _('Embedded system commands') + '</b>')
-        label_header.set_xalign(0)
-        label_header.set_margin_top(18)
-        label_header.set_margin_bottom(6)
+        self.option_autoshow_build_log = Adw.ComboRow()
+        self.option_autoshow_build_log.set_title(_('Show build log'))
+        autoshow_model = Gtk.StringList()
+        for label in [_('.. only when errors occurred.'),
+                      _('.. on errors and warnings.'),
+                      _('.. on errors, warnings and badboxes.')]:
+            autoshow_model.append(label)
+        self.option_autoshow_build_log.set_model(autoshow_model)
+        group_build_log.add(self.option_autoshow_build_log)
+
+        group_shell_escape = Adw.PreferencesGroup()
+        group_shell_escape.set_title(_('Embedded system commands'))
+        self.add(group_shell_escape)
 
         label_explainer = Gtk.Label()
         label_explainer.set_wrap(True)
         label_explainer.set_markup(_('Warning: enable this only if you have to. It can cause security problems when building files from untrusted sources.'))
         label_explainer.set_xalign(0)
-        label_explainer.set_margin_bottom(9)
-        label_explainer.get_style_context().add_class('description')
-        self.option_system_commands_disable = Gtk.CheckButton.new_with_label(_('Disable') + ' (' + _('recommended') + ')')
-        self.option_system_commands_restricted = Gtk.CheckButton.new_with_label(_('Enable restricted \\write18{SHELL COMMAND}'))
-        self.option_system_commands_restricted.set_group(self.option_system_commands_disable)
-        self.option_system_commands_full = Gtk.CheckButton.new_with_label(_('Fully enable \\write18{SHELL COMMAND}'))
-        self.option_system_commands_full.set_group(self.option_system_commands_disable)
+        label_explainer.add_css_class('caption')
+        group_shell_escape.add(label_explainer)
 
-        self.shell_escape_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.shell_escape_box.append(label_header)
-        self.shell_escape_box.append(label_explainer)
-        self.shell_escape_box.append(self.option_system_commands_disable)
-        self.shell_escape_box.append(self.option_system_commands_restricted)
-        self.shell_escape_box.append(self.option_system_commands_full)
-
-        self.append(self.shell_escape_box)
-
-
+        self.option_system_commands = Adw.ComboRow()
+        self.option_system_commands.set_title(_('System commands'))
+        shell_model = Gtk.StringList()
+        for label in [_('Disable') + ' (' + _('recommended') + ')',
+                      _('Enable restricted \\write18{SHELL COMMAND}'),
+                      _('Fully enable \\write18{SHELL COMMAND}')]:
+            shell_model.append(label)
+        self.option_system_commands.set_model(shell_model)
+        group_shell_escape.add(self.option_system_commands)

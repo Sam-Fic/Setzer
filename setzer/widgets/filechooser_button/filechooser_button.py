@@ -30,10 +30,10 @@ class FilechooserButtonView(Gtk.Button):
     def __init__(self):
         Gtk.Button.__init__(self)
 
-        self.button_widget = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 6)
-        self.button_label = Gtk.Label.new(_('(None)'))
+        self.button_widget = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+        self.button_label = Gtk.Label(label=_('(None)'))
         self.button_label.set_ellipsize(Pango.EllipsizeMode.START)
-        self.button_widget.append(Gtk.Image.new_from_icon_name('document-open-symbolic'))
+        self.button_widget.append(Gtk.Image(icon_name='document-open-symbolic'))
         self.button_widget.append(self.button_label)
         self.set_child(self.button_widget)
 

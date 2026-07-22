@@ -33,54 +33,54 @@ class SymbolsPageView(Gtk.Box):
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.set_size_request(252, -1)
 
-        self.get_style_context().add_class('sidebar-symbols')
+        self.add_css_class('sidebar-symbols')
 
         self.overlay = Gtk.Overlay()
         self.overlay.set_vexpand(True)
         self.overlay.set_can_focus(False)
-        self.vbox_top = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.vbox_top = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_vexpand(True)
-        self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.scrolled_window.set_child(self.vbox)
 
         self.tabs_box = Gtk.CenterBox()
         self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.tabs_box.set_valign(Gtk.Align.START)
         self.tabs_box.set_halign(Gtk.Align.FILL)
-        self.tabs_box.get_style_context().add_class('tabs-box')
+        self.tabs_box.add_css_class('tabs-box')
 
-        self.tabs = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.tabs = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
-        self.prev_button = Gtk.Button.new_from_icon_name('go-up-symbolic')
+        self.prev_button = Gtk.Button(icon_name='go-up-symbolic')
         self.prev_button.set_can_focus(False)
-        self.prev_button.get_style_context().add_class('flat')
+        self.prev_button.add_css_class('flat')
         self.prev_button.set_tooltip_text(_('Back'))
         self.tabs.append(self.prev_button)
 
-        self.next_button = Gtk.Button.new_from_icon_name('go-down-symbolic')
+        self.next_button = Gtk.Button(icon_name='go-down-symbolic')
         self.next_button.set_can_focus(False)
-        self.next_button.get_style_context().add_class('flat')
+        self.next_button.add_css_class('flat')
         self.next_button.set_tooltip_text(_('Forward'))
         self.tabs.append(self.next_button)
 
         self.search_button = Gtk.ToggleButton()
         self.search_button.set_icon_name('edit-find-symbolic')
         self.search_button.set_can_focus(False)
-        self.search_button.get_style_context().add_class('flat')
+        self.search_button.add_css_class('flat')
         self.search_button.set_tooltip_text(_('Find'))
         self.tabs.append(self.search_button)
 
         self.search_revealer = Gtk.Revealer()
-        self.search_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.search_box.get_style_context().add_class('search_bar')
+        self.search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.search_box.add_css_class('search_bar')
 
         self.search_entry = SearchEntry()
         self.search_entry.set_hexpand(True)
         self.search_box.append(self.search_entry)
 
-        self.search_close_button = Gtk.Button.new_from_icon_name('window-close-symbolic')
-        self.search_close_button.get_style_context().add_class('flat')
+        self.search_close_button = Gtk.Button(icon_name='window-close-symbolic')
+        self.search_close_button.add_css_class('flat')
         self.search_close_button.set_can_focus(False)
         self.search_box.append(self.search_close_button)
 
@@ -97,12 +97,12 @@ class SymbolsPageView(Gtk.Box):
         self.symbols_views = list()
         self.placeholders = list()
 
-        self.label_recent = Gtk.Label.new(_('Recent'))
+        self.label_recent = Gtk.Label(label=_('Recent'))
         self.label_recent.set_xalign(0)
         self.label_recent.set_halign(Gtk.Align.START)
         self.label_recent.set_valign(Gtk.Align.START)
         self.label_recent.set_size_request(108, -1)
-        self.label_recent.get_style_context().add_class('overlay')
+        self.label_recent.add_css_class('overlay')
         self.label_recent.set_can_target(False)
         self.overlay.add_overlay(self.label_recent)
 
@@ -123,7 +123,7 @@ class SymbolsPageView(Gtk.Box):
                            'SidebarSymbolsList("operators", 47)'])
         self.symbols_lists.append(['misc_math', 'own-symbols-misc-math-symbolic', _('Misc. Math'), 
                            'SidebarSymbolsList("misc_math", 42)'])
-        self.symbols_lists.append(['misc_text', 'own-symbols-misc-text-symbolic', _('Misc. Symbols'), 
+        self.symbols_lists.append(['misc_text', 'insert-text-symbolic', _('Misc. Symbols'),
                            'SidebarSymbolsList("misc_text", 38)'])
 
         self.init_symbols_lists()
@@ -131,18 +131,18 @@ class SymbolsPageView(Gtk.Box):
     def init_symbols_lists(self):
         for symbols_list in self.symbols_lists:
             symbols_list_view = eval(symbols_list[3])
-            label = Gtk.Label.new(symbols_list[2])
+            label = Gtk.Label(label=symbols_list[2])
             label.set_xalign(0)
             label.set_halign(Gtk.Align.START)
             label.set_valign(Gtk.Align.START)
             label.set_size_request(108, -1)
-            label.get_style_context().add_class('overlay')
+            label.add_css_class('overlay')
             label.set_can_target(False)
             self.overlay.add_overlay(label)
             self.labels.append(label)
-            placeholder = Gtk.Label.new(symbols_list[2])
+            placeholder = Gtk.Label(label=symbols_list[2])
             placeholder.set_xalign(0)
-            placeholder.get_style_context().add_class('placeholder')
+            placeholder.add_css_class('placeholder')
             self.placeholders.append(placeholder)
             self.vbox.append(placeholder)
             self.symbols_views.append(symbols_list_view)
@@ -178,7 +178,7 @@ class SidebarSymbolsList(Gtk.FlowBox):
         for symbol in self.symbols:
             size = max(symbol[3], symbol[4])
 
-            image = Gtk.Image.new_from_icon_name('sidebar-' + symbol[0] + '-symbolic')
+            image = Gtk.Image(icon_name='sidebar-' + symbol[0] + '-symbolic')
             image.set_pixel_size(int(size * 1.5))
             tooltip_text = symbol[1]
             if symbol[2] != None: 

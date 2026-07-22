@@ -79,8 +79,8 @@ class IncludeLaTeXFile(object):
         first_button = None
         for pathtype in self.pathtypes:
             self.view.pathtype_buttons[pathtype] = Gtk.ToggleButton()
-            box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-            box.append(Gtk.Label.new(self.pathtypes[pathtype]))
+            box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+            box.append(Gtk.Label(label=self.pathtypes[pathtype]))
             box.set_margin_end(6)
             box.set_margin_start(4)
             self.view.pathtype_buttons[pathtype].set_child(box)

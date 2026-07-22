@@ -25,9 +25,9 @@ class DocumentView(Gtk.Box):
     def __init__(self, document):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.get_style_context().add_class('document')
+        self.add_css_class('document')
 
-        self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.vbox.set_hexpand(True)
 
         self.source_view = document.source_view
@@ -44,7 +44,7 @@ class DocumentView(Gtk.Box):
         self.margin = Gtk.DrawingArea()
         self.margin.set_hexpand(False)
 
-        self.hbox = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.hbox.append(self.margin)
         self.hbox.append(self.scrolled_window)
 

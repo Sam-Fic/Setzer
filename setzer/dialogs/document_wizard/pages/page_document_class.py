@@ -66,7 +66,7 @@ class DocumentClassPageView(PageView):
         self.list.set_can_focus(False)
         self.list_rows = dict()
         for document_class in ['beamer', 'letter', 'book', 'report', 'article']:
-            label = Gtk.Label.new(document_class.title())
+            label = Gtk.Label(label=document_class.title())
             label.set_xalign(0)
             row = Gtk.ListBoxRow()
             row.set_child(label)
@@ -74,7 +74,7 @@ class DocumentClassPageView(PageView):
             self.list.prepend(row)
 
         self.list.set_vexpand(False)
-        self.list.get_style_context().add_class('document-wizard-list1')
+        self.list.add_css_class('document-wizard-list1')
         
         self.preview_container = Gtk.Stack()
         self.preview_container.set_size_request(366, -1)
@@ -95,13 +95,13 @@ class DocumentClassPageView(PageView):
             label.set_margin_start(19)
             label.set_margin_end(18)
 
-            box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+            box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
             box.append(image)
             box.append(label)
 
             self.preview_container.add_named(box, item['name'])
         
-        self.content = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.content.append(self.list)
         self.content.append(self.preview_container)
 

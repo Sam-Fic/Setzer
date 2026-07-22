@@ -42,7 +42,7 @@ class PreviewZoomLevelView(Popover):
         self.add_closing_button(self.button_fit_to_width)
         self.add_closing_button(self.button_fit_to_text_width)
         self.add_closing_button(self.button_fit_to_height)
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         for level in self.levels:
             self.add_closing_button(self.zoom_level_buttons[level])
 

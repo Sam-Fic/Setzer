@@ -149,17 +149,17 @@ class Search(Observable):
             result = self.search_context.forward(buffer.get_start_iter())
             if result[0] == False:
                 self.set_match_counter(-1, -1)
-                search_view.entry.get_style_context().add_class('error')
+                search_view.entry.add_css_class('error')
                 search_view.replace_all_button.set_sensitive(False)
             else:
-                search_view.entry.get_style_context().remove_class('error')
+                search_view.entry.remove_css_class('error')
                 while self.search_context.get_occurrences_count() == -1 and result[0] == True:
                     result = self.search_context.forward(result[2])
                 self.on_search_next_match(entry, include_current_highlight=True)
                 search_view.replace_all_button.set_sensitive(True)
         else:
             self.set_match_counter(-1, -1)
-            search_view.entry.get_style_context().remove_class('error')
+            search_view.entry.remove_css_class('error')
             search_view.replace_all_button.set_sensitive(False)
 
     def update_replace_button(self):

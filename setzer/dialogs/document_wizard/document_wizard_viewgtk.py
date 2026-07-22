@@ -30,7 +30,7 @@ class DocumentWizardView(DialogView):
         DialogView.__init__(self, main_window)
 
         self.set_default_size(750, 500)
-        self.headerbar.set_title_widget(Gtk.Label.new(_('Add / Remove Packages')))
+        self.headerbar.set_title_widget(Gtk.Label(label=_('Add / Remove Packages')))
         self.headerbar.set_show_title_buttons(False)
         self.topbox.set_size_request(750, 450)
 
@@ -38,12 +38,12 @@ class DocumentWizardView(DialogView):
         self.center_box.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.pages = list()
 
-        self.title_label = Gtk.Label.new(_('Create a template document'))
-        self.title_label.get_style_context().add_class('title')
-        self.subtitle_label = Gtk.Label.new('')
-        self.subtitle_label.get_style_context().add_class('subtitle')
+        self.title_label = Gtk.Label(label=_('Create a template document'))
+        self.title_label.add_css_class('title')
+        self.subtitle_label = Gtk.Label(label='')
+        self.subtitle_label.add_css_class('subtitle')
 
-        self.title_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.title_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.title_box.append(self.title_label)
         self.title_box.append(self.subtitle_label)
 
@@ -59,11 +59,11 @@ class DocumentWizardView(DialogView):
         
         self.next_button = Gtk.Button.new_with_mnemonic(_('_Next'))
         self.next_button.set_can_focus(False)
-        self.next_button.get_style_context().add_class('suggested-action')
+        self.next_button.add_css_class('suggested-action')
 
         self.create_button = Gtk.Button.new_with_mnemonic(_('_Create'))
         self.create_button.set_can_focus(False)
-        self.create_button.get_style_context().add_class('suggested-action')
+        self.create_button.add_css_class('suggested-action')
 
         self.headerbar.set_title_widget(self.title_widget)
         self.headerbar.pack_start(self.cancel_button)

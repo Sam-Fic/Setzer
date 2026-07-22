@@ -30,13 +30,13 @@ class DocumentStructurePage(Gtk.Overlay):
         self.content_vbox_children = list()
         self.scroll_to = None
 
-        self.content_vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.content_vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.scrolled_window = Gtk.ScrolledWindow()
         self.scrolled_window.set_child(self.content_vbox)
         self.scrolled_window.set_vexpand(True)
         self.scrolled_window.set_can_focus(False)
 
-        self.vbox = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.add_buttons()
         self.vbox.append(self.scrolled_window)
         self.set_child(self.vbox)
@@ -51,44 +51,44 @@ class DocumentStructurePage(Gtk.Overlay):
         self.content_vbox_children.append(widget)
 
     def add_label(self, name, text):
-        label_inline = Gtk.Label.new(text)
+        label_inline = Gtk.Label(label=text)
         label_inline.set_xalign(0)
-        label_inline.get_style_context().add_class('headline')
+        label_inline.add_css_class('headline')
         self.content_vbox.append(label_inline)
         self.content_vbox_children.append(label_inline)
 
-        label_overlay = Gtk.Label.new(text)
+        label_overlay = Gtk.Label(label=text)
         label_overlay.set_xalign(0)
         label_overlay.set_halign(Gtk.Align.START)
         label_overlay.set_valign(Gtk.Align.START)
         label_overlay.set_size_request(148, -1)
-        label_overlay.get_style_context().add_class('overlay')
+        label_overlay.add_css_class('overlay')
         label_overlay.set_can_target(False)
         self.add_overlay(label_overlay)
 
         self.labels[name] = {'inline': label_inline, 'overlay': label_overlay}
 
     def add_buttons(self):
-        self.tabs = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.tabs = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
         self.prev_button = Gtk.Button()
         self.prev_button.set_icon_name('go-up-symbolic')
         self.prev_button.set_tooltip_text(_('Back'))
-        self.prev_button.get_style_context().add_class('flat')
+        self.prev_button.add_css_class('flat')
         self.prev_button.set_can_focus(False)
         self.tabs.append(self.prev_button)
 
         self.next_button = Gtk.Button()
         self.next_button.set_icon_name('go-down-symbolic')
         self.next_button.set_tooltip_text(_('Forward'))
-        self.next_button.get_style_context().add_class('flat')
+        self.next_button.add_css_class('flat')
         self.next_button.set_can_focus(False)
         self.tabs.append(self.next_button)
 
         self.tabs_box = Gtk.CenterBox()
         self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.tabs_box.get_style_context().add_class('tabs-box')
-        self.tabs_box.set_start_widget(Gtk.Label.new('Files'))
+        self.tabs_box.add_css_class('tabs-box')
+        self.tabs_box.set_start_widget(Gtk.Label(label='Files'))
         self.tabs_box.set_end_widget(self.tabs)
         self.vbox.append(self.tabs_box)
 
@@ -114,14 +114,14 @@ class DocumentStructurePage(Gtk.Overlay):
             for label_name in self.labels:
                 self.labels[label_name]['overlay'].set_visible(False)
         else:
-            self.tabs_box.get_style_context().remove_class('no-border')
+            self.tabs_box.remove_css_class('no-border')
             for label_name, label_offset in zip(self.labels, self.get_label_offsets()):
                 margin_top = max(0, label_offset - int(scrolling_offset))
                 self.labels[label_name]['overlay'].set_visible(True)
                 self.labels[label_name]['overlay'].set_margin_top(margin_top)
 
                 if margin_top > 0 and margin_top <= tabs_height:
-                    self.tabs_box.get_style_context().add_class('no-border')
+                    self.tabs_box.add_css_class('no-border')
 
     def on_next_button_clicked(self, button):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()

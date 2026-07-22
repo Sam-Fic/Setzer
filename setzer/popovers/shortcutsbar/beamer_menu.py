@@ -39,10 +39,10 @@ class BeamerMenuView(Popover):
 
         self.add_action_button('main', '\\usetheme', 'win.insert-after-packages', GLib.Variant('as', ['\\usetheme{•}']))
         self.add_action_button('main', _('Hide Navigation'), 'win.insert-after-packages', GLib.Variant('as', ['\\beamertemplatenavigationsymbolsempty']))
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_insert_symbol_item('main', _('Title Page'), ['\\begin{frame}\n\t\\titlepage\n\\end{frame}'])
         self.add_insert_symbol_item('main', _('Table of Contents'), ['\\begin{frame}\n\t\\tableofcontents\n\\end{frame}'])
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_before_after_item('main', _('Frame'), ['\\begin{frame}\n\t', '\n\\end{frame}'])
         self.add_before_after_item('main', _('Frame with Title'), ['\\begin{frame}\n\t\\frametitle{•}\n\n\t', '\n\\end{frame}'])
         self.add_before_after_item('main', _('\\frametitle'), ['\\frametitle{', '}'])

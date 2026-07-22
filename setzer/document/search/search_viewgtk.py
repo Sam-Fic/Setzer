@@ -28,31 +28,31 @@ class SearchBar(Gtk.Revealer):
     def __init__(self):
         Gtk.Revealer.__init__(self)
         
-        self.super_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        self.super_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.box = Gtk.CenterBox()
         self.box.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.super_box.append(self.box)
-        self.super_box.get_style_context().add_class('search_bar')
+        self.super_box.add_css_class('search_bar')
 
-        self.left_box = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        self.replace_wrapper = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.left_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.replace_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
         self.entry = SearchEntry()
-        self.entry.get_style_context().add_class('search_entry')
+        self.entry.add_css_class('search_entry')
 
-        self.arrow = Gtk.Image.new_from_icon_name('own-searchandreplacearrow-symbolic')
+        self.arrow = Gtk.Image(icon_name='go-next-symbolic')
         self.arrow.set_margin_start(6)
 
         self.replace_entry = Gtk.Entry()
         self.replace_entry.set_width_chars(4)
-        self.replace_entry.get_style_context().add_class('replace_entry')
+        self.replace_entry.add_css_class('replace_entry')
         self.replace_entry.set_size_request(105, -1)
         self.replace_entry.set_margin_start(6)
 
-        self.prev_button = Gtk.Button.new_from_icon_name('go-up-symbolic')
+        self.prev_button = Gtk.Button(icon_name='go-up-symbolic')
         self.prev_button.set_can_focus(False)
         self.prev_button.set_tooltip_text(_('Previous result') + ' (Ctrl+Shift+G)')
-        self.next_button = Gtk.Button.new_from_icon_name('go-down-symbolic')
+        self.next_button = Gtk.Button(icon_name='go-down-symbolic')
         self.next_button.set_can_focus(False)
         self.next_button.set_tooltip_text(_('Next result') + ' (Ctrl+G)')
         self.replace_button = Gtk.Button.new_with_label(_('Replace'))
@@ -71,21 +71,21 @@ class SearchBar(Gtk.Revealer):
         self.left_box.append(self.next_button)
         self.left_box.append(self.replace_wrapper)
         self.left_box.set_margin_start(6)
-        self.left_box.get_style_context().add_class('linked')
+        self.left_box.add_css_class('linked')
 
         self.match_counter = Gtk.Label()
         self.match_counter.set_halign(Gtk.Align.START)
         self.match_counter.set_xalign(1)
         self.match_counter.set_hexpand(False)
         self.match_counter.set_property('can-target', False)
-        self.match_counter.get_style_context().add_class('search_match_counter')
+        self.match_counter.add_css_class('search_match_counter')
 
         self.overlay_wrapper = Gtk.Overlay()
         self.overlay_wrapper.set_child(self.super_box)
         self.overlay_wrapper.add_overlay(self.match_counter)
 
-        self.close_button = Gtk.Button.new_from_icon_name('window-close-symbolic')
-        self.close_button.get_style_context().add_class('flat')
+        self.close_button = Gtk.Button(icon_name='window-close-symbolic')
+        self.close_button.add_css_class('flat')
         self.close_button.set_can_focus(False)
 
         self.replace_wrapper.append(self.arrow)

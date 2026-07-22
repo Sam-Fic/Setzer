@@ -30,7 +30,7 @@ class Popover(Gtk.Box):
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.set_halign(Gtk.Align.START)
         self.set_valign(Gtk.Align.START)
-        self.get_style_context().add_class('popover')
+        self.add_css_class('popover')
 
         self.popover_manager = popover_manager
 
@@ -44,20 +44,20 @@ class Popover(Gtk.Box):
         self.buttons_by_id = {'main': list()}
 
         self.arrow = Gtk.DrawingArea()
-        self.arrow.get_style_context().add_class('arrow')
+        self.arrow.add_css_class('arrow')
         self.arrow_box = Gtk.CenterBox()
         self.arrow_box.set_start_widget(self.arrow)
 
         self.arrow_border = Gtk.DrawingArea()
-        self.arrow_border.get_style_context().add_class('arrow-border')
+        self.arrow_border.add_css_class('arrow-border')
         self.arrow_border_box = Gtk.CenterBox()
         self.arrow_border_box.set_start_widget(self.arrow_border)
 
         self.stack = Gtk.Stack()
         self.stack.set_vhomogeneous(False)
 
-        self.content_box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
-        self.content_box.get_style_context().add_class('content')
+        self.content_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+        self.content_box.add_css_class('content')
         self.content_box.append(self.arrow_border_box)
         self.content_box.append(self.stack)
 
@@ -97,18 +97,18 @@ class Popover(Gtk.Box):
         return True
 
     def add_page(self, pagename='main', label=None):
-        box = Gtk.Box.new(Gtk.Orientation.VERTICAL, 0)
+        box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.stack.add_named(box, pagename)
 
         if label != None:
             button_box = Gtk.CenterBox()
             button_box.set_orientation(Gtk.Orientation.HORIZONTAL)
-            button_box.set_center_widget(Gtk.Label.new(label))
-            button_box.set_start_widget(Gtk.Image.new_from_icon_name('pan-start-symbolic'))
+            button_box.set_center_widget(Gtk.Label(label=label))
+            button_box.set_start_widget(Gtk.Image(icon_name='pan-start-symbolic'))
 
             button = Gtk.Button()
             button.set_child(button_box)
-            button.get_style_context().add_class('header')
+            button.add_css_class('header')
             button.connect('clicked', self.show_page, 'main', Gtk.StackTransitionType.SLIDE_LEFT)
 
             self.register_button_for_keyboard_navigation(button, pagename)
@@ -233,10 +233,10 @@ class Popover(Gtk.Box):
 
     def set_selected_button(self, pagename, button_id):
         for button in self.buttons_by_id[pagename]:
-            button.get_style_context().remove_class('highlight')
+            button.remove_css_class('highlight')
 
         self.selected_button_id[pagename] = button_id
         if button_id != None:
-            self.buttons_by_id[pagename][button_id].get_style_context().add_class('highlight')
+            self.buttons_by_id[pagename][button_id].add_css_class('highlight')
 
 

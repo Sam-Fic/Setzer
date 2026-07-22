@@ -35,15 +35,15 @@ class HelpPanelPresenter(object):
             self.view.search_results.remove(item)
         self.view.search_result_items = list()
         if results_list:
-            self.view.search_entry.get_style_context().remove_class('error')
+            self.view.search_entry.remove_css_class('error')
             for item in reversed(results_list):
                 list_item = help_panel_view.SearchResultView(item)
                 self.view.search_results.prepend(list_item)
                 self.view.search_result_items.append(list_item)
         elif self.help_panel.query != '':
-            self.view.search_entry.get_style_context().add_class('error')
+            self.view.search_entry.add_css_class('error')
         else:
-            self.view.search_entry.get_style_context().remove_class('error')
+            self.view.search_entry.remove_css_class('error')
 
     def on_uri_changed(self, help_panel, uri):
         if self.view.content.get_uri() != uri:

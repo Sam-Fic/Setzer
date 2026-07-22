@@ -60,12 +60,20 @@ class PopoverManager():
 
         PopoverManager.inbetween.set_can_target(False)
 
+        # 预创建已脱离 PopoverManager 框架的标准弹窗（供 headerbar / 快捷键引用）
+        from setzer.popovers.new_document.new_document import NewDocument
+        from setzer.popovers.document_chooser.document_chooser import DocumentChooser
+        from setzer.popovers.document_switcher.document_switcher import DocumentSwitcher
+        PopoverManager.popovers['new_document'] = NewDocument()
+        PopoverManager.popovers['open_document'] = DocumentChooser(PopoverManager.workspace)
+        PopoverManager.popovers['document_switcher'] = DocumentSwitcher(PopoverManager.workspace)
+
+    def get_popover(name):
+        return PopoverManager.popovers.get(name)
+
     def create_popover(name):
         popover = None
-        if name == 'new_document': popover = NewDocument(PopoverManager)
-        if name == 'open_document': popover = DocumentChooser(PopoverManager, PopoverManager.workspace)
-        if name == 'document_switcher': popover = DocumentSwitcher(PopoverManager, PopoverManager.workspace)
-        if name == 'hamburger_menu': popover = HamburgerMenu(PopoverManager, PopoverManager.workspace)
+        if name == 'hamburger_menu': popover = HamburgerMenu(PopoverManager.workspace)
         if name == 'beamer_menu': popover = BeamerMenu(PopoverManager)
         if name == 'bibliography_menu': popover = BibliographyMenu(PopoverManager)
         if name == 'document_menu': popover = DocumentMenu(PopoverManager)

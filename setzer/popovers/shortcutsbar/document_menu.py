@@ -40,11 +40,11 @@ class DocumentMenuView(Popover):
         self.add_insert_symbol_item('main', '\\documentclass', ['\\documentclass[•]{•}'])
         self.add_action_button('main', _('Add / Remove Packages') + '...', 'win.add-remove-packages-dialog')
         self.add_menu_button(_('Document Info'), 'document_info')
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_before_after_item('main', _('Document Environment'), ['\\begin{document}\n\t', '\n\\end{document}'])
         self.add_insert_symbol_item('main', _('Show Title') + ' (\\maketitle)', ['\\maketitle'])
         self.add_insert_symbol_item('main', _('Table of Contents'), ['\\tableofcontents'])
-        self.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        self.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
         self.add_action_button('main', _('Include LaTeX File') + ' (\\input)...', 'win.include-latex-file')
 
         # document info submenu

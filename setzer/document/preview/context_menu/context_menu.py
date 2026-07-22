@@ -63,7 +63,7 @@ class ContextMenu(object):
         button_backward_sync = self.create_button(_('Show Source'), self.show_source)
         popover.add_widget(button_backward_sync)
 
-        popover.add_widget(Gtk.Separator.new(Gtk.Orientation.HORIZONTAL))
+        popover.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
 
         self.button_zoom_in = self.create_button(_('Zoom In'), self.zoom_in)
         popover.add_widget(self.button_zoom_in)

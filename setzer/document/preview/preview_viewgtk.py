@@ -29,7 +29,7 @@ class PreviewView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.get_style_context().add_class('preview')
+        self.add_css_class('preview')
 
         self.content = ScrollingWidget()
         self.drawing_area = self.content.content
@@ -50,7 +50,7 @@ class PreviewView(Gtk.Box):
         self.target_label.set_halign(Gtk.Align.START)
         self.target_label.set_valign(Gtk.Align.END)
         self.target_label.set_can_target(False)
-        self.target_label.get_style_context().add_class('target-label')
+        self.target_label.add_css_class('target-label')
         self.overlay.add_overlay(self.target_label)
         self.set_link_target_string('')
 
@@ -67,22 +67,22 @@ class BlankSlateView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.get_style_context().add_class('preview_blank')
+        self.add_css_class('preview_blank')
 
         drawing_area = Gtk.DrawingArea()
         drawing_area.set_vexpand(True)
         self.append(drawing_area)
 
-        image = Gtk.Image.new_from_icon_name('own-no-preview-symbolic')
+        image = Gtk.Image(icon_name='document-properties-symbolic')
         image.set_pixel_size(150)
         self.append(image)
 
-        header = Gtk.Label.new(_('No preview available'))
-        header.get_style_context().add_class('header')
+        header = Gtk.Label(label=_('No preview available'))
+        header.add_css_class('header')
         self.append(header)
 
-        body = Gtk.Label.new(_('To show a .pdf preview of your document, click the build button in the headerbar.'))
-        body.get_style_context().add_class('body')
+        body = Gtk.Label(label=_('To show a .pdf preview of your document, click the build button in the headerbar.'))
+        body.add_css_class('body')
         body.set_wrap(True)
         self.append(body)
 

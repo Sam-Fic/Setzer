@@ -31,13 +31,13 @@ class Shortcutsbar(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.get_style_context().add_class('shortcutsbar')
+        self.add_css_class('shortcutsbar')
         self.set_can_focus(False)
 
         self.current_popover = None # popover being processed
         self.current_page = 'main' # page being processed
 
-        self.top_icons = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
+        self.top_icons = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.right_icons = Gtk.Box()
         self.right_icons.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.center_icons = Gtk.CenterBox()
@@ -48,8 +48,8 @@ class Shortcutsbar(Gtk.Box):
         self.italic_button.set_icon_name('format-text-italic-symbolic')
         self.italic_button.set_action_name('win.insert-before-after')
         self.italic_button.set_action_target_value(GLib.Variant('as', ['\\textit{', '}']))
-        self.italic_button.get_style_context().add_class('flat')
-        self.italic_button.get_style_context().add_class('scbar')
+        self.italic_button.add_css_class('flat')
+        self.italic_button.add_css_class('scbar')
         self.italic_button.set_tooltip_text(_('Italic') + ' (' + _('Ctrl') + '+I)')
         self.top_icons.prepend(self.italic_button)
 
@@ -57,8 +57,8 @@ class Shortcutsbar(Gtk.Box):
         self.bold_button.set_icon_name('format-text-bold-symbolic')
         self.bold_button.set_action_name('win.insert-before-after')
         self.bold_button.set_action_target_value(GLib.Variant('as', ['\\textbf{', '}']))
-        self.bold_button.get_style_context().add_class('flat')
-        self.bold_button.get_style_context().add_class('scbar')
+        self.bold_button.add_css_class('flat')
+        self.bold_button.add_css_class('scbar')
         self.bold_button.set_tooltip_text(_('Bold') + ' (' + _('Ctrl') + '+B)')
         self.top_icons.prepend(self.bold_button)
 
@@ -77,29 +77,29 @@ class Shortcutsbar(Gtk.Box):
         self.button_search = Gtk.ToggleButton()
         self.button_search.set_icon_name('edit-find-symbolic')
         self.button_search.set_tooltip_text(_('Find') + ' (' + _('Ctrl') + '+F)')
-        self.button_search.get_style_context().add_class('flat')
-        self.button_search.get_style_context().add_class('scbar')
+        self.button_search.add_css_class('flat')
+        self.button_search.add_css_class('scbar')
         self.right_icons.append(self.button_search)
 
         self.button_replace = Gtk.ToggleButton()
         self.button_replace.set_icon_name('edit-find-replace-symbolic')
         self.button_replace.set_tooltip_text(_('Find and Replace') + ' (' + _('Ctrl') + '+H)')
-        self.button_replace.get_style_context().add_class('flat')
-        self.button_replace.get_style_context().add_class('scbar')
+        self.button_replace.add_css_class('flat')
+        self.button_replace.add_css_class('scbar')
         self.right_icons.append(self.button_replace)
 
         self.button_more = PopoverManager.create_popover_button('context_menu')
         self.button_more.set_icon_name('view-more-symbolic')
-        self.button_more.get_style_context().add_class('flat')
-        self.button_more.get_style_context().add_class('scbar')
+        self.button_more.add_css_class('flat')
+        self.button_more.add_css_class('scbar')
         self.button_more.set_tooltip_text(_('Context Menu') + ' (F12)')
         self.right_icons.append(self.button_more)
 
         self.button_build_log = Gtk.ToggleButton()
         self.button_build_log.set_icon_name('build-log-symbolic')
         self.button_build_log.set_tooltip_text(_('Build log') + ' (F8)')
-        self.button_build_log.get_style_context().add_class('flat')
-        self.button_build_log.get_style_context().add_class('scbar')
+        self.button_build_log.add_css_class('flat')
+        self.button_build_log.add_css_class('scbar')
         self.right_icons.append(self.button_build_log)
 
         self.append(self.top_icons)
@@ -107,14 +107,14 @@ class Shortcutsbar(Gtk.Box):
         self.append(self.right_icons)
 
     def insert_wizard_button(self):
-        icon_widget = Gtk.Box.new(Gtk.Orientation.HORIZONTAL, 0)
-        icon = Gtk.Image.new_from_icon_name('own-wizard-symbolic')
+        icon_widget = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        icon = Gtk.Image(icon_name='document-new-symbolic')
         icon.set_margin_start(4)
         icon_widget.append(icon)
-        label = Gtk.Label.new(_('New Document Wizard'))
+        label = Gtk.Label(label=_('New Document Wizard'))
         label.set_margin_start(6)
         label.set_margin_end(4)
-        label.get_style_context().add_class('wizard-button-label')
+        label.add_css_class('wizard-button-label')
         self.wizard_button_revealer = Gtk.Revealer()
         self.wizard_button_revealer.set_child(label)
         self.wizard_button_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_LEFT)
@@ -122,8 +122,8 @@ class Shortcutsbar(Gtk.Box):
         icon_widget.append(self.wizard_button_revealer)
 
         self.wizard_button = Gtk.Button()
-        self.wizard_button.get_style_context().add_class('flat')
-        self.wizard_button.get_style_context().add_class('scbar')
+        self.wizard_button.add_css_class('flat')
+        self.wizard_button.add_css_class('scbar')
         self.wizard_button.set_tooltip_text(_('Create a template document'))
         self.wizard_button.set_can_focus(False)
         self.wizard_button.set_child(icon_widget)
@@ -136,8 +136,8 @@ class Shortcutsbar(Gtk.Box):
 
         self.document_button = PopoverManager.create_popover_button('document_menu')
         self.document_button.set_icon_name('application-x-addon-symbolic')
-        self.document_button.get_style_context().add_class('flat')
-        self.document_button.get_style_context().add_class('scbar')
+        self.document_button.add_css_class('flat')
+        self.document_button.add_css_class('scbar')
         self.document_button.set_tooltip_text(_('Document'))
 
         self.top_icons.prepend(self.document_button)
@@ -148,8 +148,8 @@ class Shortcutsbar(Gtk.Box):
         self.beamer_button = PopoverManager.create_popover_button('beamer_menu')
         self.beamer_button.set_icon_name('view-list-bullet-symbolic')
         self.beamer_button.set_tooltip_text(_('Beamer'))
-        self.beamer_button.get_style_context().add_class('flat')
-        self.beamer_button.get_style_context().add_class('scbar')
+        self.beamer_button.add_css_class('flat')
+        self.beamer_button.add_css_class('scbar')
 
         self.top_icons.prepend(self.beamer_button)
 
@@ -159,8 +159,8 @@ class Shortcutsbar(Gtk.Box):
         self.bibliography_button = PopoverManager.create_popover_button('bibliography_menu')
         self.bibliography_button.set_icon_name('library-symbolic')
         self.bibliography_button.set_tooltip_text(_('Bibliography'))
-        self.bibliography_button.get_style_context().add_class('flat')
-        self.bibliography_button.get_style_context().add_class('scbar')
+        self.bibliography_button.add_css_class('flat')
+        self.bibliography_button.add_css_class('scbar')
 
         self.top_icons.prepend(self.bibliography_button)
 
@@ -170,8 +170,8 @@ class Shortcutsbar(Gtk.Box):
         self.text_button = PopoverManager.create_popover_button('text_menu')
         self.text_button.set_icon_name('text-symbolic')
         self.text_button.set_tooltip_text(_('Text'))
-        self.text_button.get_style_context().add_class('flat')
-        self.text_button.get_style_context().add_class('scbar')
+        self.text_button.add_css_class('flat')
+        self.text_button.add_css_class('scbar')
 
         self.top_icons.prepend(self.text_button)
 
@@ -181,8 +181,8 @@ class Shortcutsbar(Gtk.Box):
         self.quotes_button = PopoverManager.create_popover_button('quotes_menu')
         self.quotes_button.set_icon_name('own-quotes-symbolic')
         self.quotes_button.set_tooltip_text(_('Quotes') + ' (' + _('Ctrl') + '+")')
-        self.quotes_button.get_style_context().add_class('flat')
-        self.quotes_button.get_style_context().add_class('scbar')
+        self.quotes_button.add_css_class('flat')
+        self.quotes_button.add_css_class('scbar')
 
         self.top_icons.prepend(self.quotes_button)
 
@@ -192,8 +192,8 @@ class Shortcutsbar(Gtk.Box):
         self.math_button = PopoverManager.create_popover_button('math_menu')
         self.math_button.set_icon_name('own-math-menu-symbolic')
         self.math_button.set_tooltip_text(_('Math'))
-        self.math_button.get_style_context().add_class('flat')
-        self.math_button.get_style_context().add_class('scbar')
+        self.math_button.add_css_class('flat')
+        self.math_button.add_css_class('scbar')
 
         self.top_icons.prepend(self.math_button)
 
@@ -201,10 +201,10 @@ class Shortcutsbar(Gtk.Box):
         self.current_popover = PopoverManager.create_popover('object_menu')
 
         self.insert_object_button = PopoverManager.create_popover_button('object_menu')
-        self.insert_object_button.set_icon_name('own-insert-object-symbolic')
+        self.insert_object_button.set_icon_name('insert-object-symbolic')
         self.insert_object_button.set_tooltip_text(_('Objects'))
-        self.insert_object_button.get_style_context().add_class('flat')
-        self.insert_object_button.get_style_context().add_class('scbar')
+        self.insert_object_button.add_css_class('flat')
+        self.insert_object_button.add_css_class('scbar')
 
         self.top_icons.prepend(self.insert_object_button)
 

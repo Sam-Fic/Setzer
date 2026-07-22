@@ -34,7 +34,6 @@ class QuotesMenuView(Popover):
 
     def __init__(self, popover_manager):
         Popover.__init__(self, popover_manager)
-        self.get_style_context().add_class('menu-own-quotes-symbolic')
 
         self.set_width(288)
 

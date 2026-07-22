@@ -67,6 +67,17 @@
     </requires>
 
     <releases>
+        <release version="67" date="2026-7-22">
+            <description translatable="no">
+                <p>Modernize GUI to latest GTK4 and libadwaita standards:</p>
+                <ul>
+                    <li>Upgrade to Adw.PreferencesDialog for preferences</li>
+                    <li>Upgrade to Adw.ShortcutsDialog for keyboard shortcuts</li>
+                    <li>Replace all deprecated GTK4 API calls</li>
+                    <li>Update Flatpak runtime to GNOME 48</li>
+                </ul>
+            </description>
+        </release>
         <release version="66" date="2024-8-26">
             <description translatable="no">
                 <p>Mostly bugfixes, ...</p>
