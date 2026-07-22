@@ -25,7 +25,6 @@ class Sidebar(Gtk.Stack):
     def __init__(self):
         Gtk.Stack.__init__(self)
 
-        self.add_css_class('sidebar')
         self.set_size_request(252, -1)
 
 

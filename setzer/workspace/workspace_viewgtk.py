@@ -18,7 +18,7 @@
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gdk, Gio, Gtk
+from gi.repository import Adw, Gtk
 
 import setzer.workspace.build_log.build_log_viewgtk as build_log_view
 import setzer.workspace.headerbar.headerbar_viewgtk as headerbar_view
@@ -28,9 +28,6 @@ import setzer.workspace.help_panel.help_panel_viewgtk as help_panel_view
 import setzer.workspace.sidebar.sidebar_viewgtk as sidebar_view
 import setzer.workspace.welcome_screen.welcome_screen_viewgtk as welcome_screen_view
 import setzer.widgets.animated_paned.animated_paned as animated_paned
-from setzer.app.service_locator import ServiceLocator
-
-import os.path
 
 
 class MainWindow(Adw.ApplicationWindow):
@@ -77,7 +74,6 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.sidebar_paned = animated_paned.AnimatedHPaned(self.sidebar, self.preview_paned_overlay, True)
         self.sidebar_paned.set_wide_handle(True)
-        self.sidebar_paned.add_css_class('sidebar_paned')
 
         self.welcome_screen = welcome_screen_view.WelcomeScreenView()
 
@@ -86,21 +82,13 @@ class MainWindow(Adw.ApplicationWindow):
         self.mode_stack.add_named(self.sidebar_paned, 'documents')
 
         self.headerbar = headerbar_view.HeaderBar()
-        self.headerbar.set_vexpand(False)
-        self.headerbar.set_valign(Gtk.Align.START)
 
-        self.main_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.main_box.append(self.headerbar)
-        self.main_box.append(self.mode_stack)
-        self.popoverlay.set_child(self.main_box)
+        self.toolbar_view = Adw.ToolbarView()
+        self.toolbar_view.add_top_bar(self.headerbar.widget)
+        self.toolbar_view.set_content(self.mode_stack)
+        self.popoverlay.set_child(self.toolbar_view)
 
-        self.css_provider = Gtk.CssProvider()
-        resources_path = ServiceLocator.get_resources_path()
-        self.css_provider.load_from_file(Gio.File.new_for_path(os.path.join(resources_path, 'style_gtk.css')))
-        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider, Gtk.STYLE_PROVIDER_PRIORITY_USER)
         self.css_provider_font_size = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider_font_size, Gtk.STYLE_PROVIDER_PRIORITY_USER)
-        self.css_provider_colors = Gtk.CssProvider()
-        Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider_colors, Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
 

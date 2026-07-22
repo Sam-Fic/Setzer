@@ -6,12 +6,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
@@ -19,41 +19,40 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk
 
-from setzer.popovers.new_document.new_document import NewDocument
-from setzer.popovers.document_chooser.document_chooser import DocumentChooser
-from setzer.popovers.document_switcher.document_switcher import DocumentSwitcher
 from setzer.popovers.hamburger_menu.hamburger_menu import HamburgerMenu
 from setzer.popovers.preview_zoom_level.preview_zoom_level import PreviewZoomLevel
 from setzer.popovers.context_menu.context_menu import ContextMenu
-from setzer.popovers.helpers.popover_button import PopoverButton
 
 
 class PopoverManager():
+    '''Registry for the app's popovers.
+
+    Migrated off the hand-built overlay/inbetween/PopoverButton framework.
+    Popovers are now standard Gtk.Popover widgets attached to Gtk.MenuButtons.
+    This class retains only:
+      - init(): store main_window/workspace + pre-create the popovers used via
+        get_popover() by the headerbar (new_document / open_document /
+        document_switcher).
+      - create_popover(name): idempotent lazy factory for hamburger_menu /
+        preview_zoom_level / context_menu. It also wires the popover's
+        map/closed signals to the 'popup'/'popdown' change codes so that
+        Shortcuts can pause the app shortcut controller while a popover is open.
+      - get_popover(name): lookup.
+      - add_change_code/connect/disconnect: tiny observer bus.
+    '''
 
     popovers = dict()
-    popover_buttons = dict()
-    current_popover_name = None
     main_window = None
     workspace = None
-    popoverlay = None
-    inbetween = Gtk.DrawingArea()
 
-    connected_functions = dict() # observers' functions to be called when change codes are emitted
+    connected_functions = dict()  # observers' functions called on change codes
 
     def init(main_window, workspace):
         PopoverManager.main_window = main_window
         PopoverManager.workspace = workspace
-        PopoverManager.popoverlay = main_window.popoverlay
-        PopoverManager.popoverlay.add_overlay(PopoverManager.inbetween)
 
-        controller_click = Gtk.GestureClick()
-        controller_click.connect('pressed', PopoverManager.on_click_inbetween)
-        controller_click.set_button(1)
-        PopoverManager.inbetween.add_controller(controller_click)
-
-        PopoverManager.inbetween.set_can_target(False)
-
-        # 预创建已脱离 PopoverManager 框架的标准弹窗（供 headerbar / 快捷键引用）
+        # Pre-create the popovers referenced through get_popover() by the
+        # headerbar (open-doc / new-doc / document-switcher buttons).
         from setzer.popovers.new_document.new_document import NewDocument
         from setzer.popovers.document_chooser.document_chooser import DocumentChooser
         from setzer.popovers.document_switcher.document_switcher import DocumentSwitcher
@@ -65,78 +64,31 @@ class PopoverManager():
         return PopoverManager.popovers.get(name)
 
     def create_popover(name):
+        # Idempotent: several call sites (shortcutsbar, workspace context_menu,
+        # actions) request the same popover instance.
+        if name in PopoverManager.popovers:
+            return PopoverManager.popovers[name]
+
         popover = None
-        if name == 'hamburger_menu': popover = HamburgerMenu(PopoverManager.workspace)
-        if name == 'preview_zoom_level': popover = PreviewZoomLevel(PopoverManager, PopoverManager.workspace)
-        if name == 'context_menu': popover = ContextMenu(PopoverManager, PopoverManager.workspace)
+        if name == 'hamburger_menu':
+            popover = HamburgerMenu(PopoverManager.workspace)
+        elif name == 'preview_zoom_level':
+            popover = PreviewZoomLevel(PopoverManager, PopoverManager.workspace)
+        elif name == 'context_menu':
+            popover = ContextMenu(PopoverManager, PopoverManager.workspace)
 
-        PopoverManager.popovers[name] = popover
+        if popover is not None:
+            PopoverManager.popovers[name] = popover
+            # Wire map/closed to the popup/popdown change codes for popovers
+            # that pause the app shortcut controller (context_menu /
+            # preview_zoom_level). hamburger_menu is triggered natively via a
+            # Gtk.MenuButton and historically did not emit change codes.
+            if name in ('context_menu', 'preview_zoom_level'):
+                popover_widget = popover.view
+                popover_widget.connect('map', lambda w: PopoverManager.add_change_code('popup', name))
+                popover_widget.connect('closed', lambda w: PopoverManager.add_change_code('popdown', name))
+
         return popover
-
-    def create_popover_button(name):
-        popover_button = PopoverButton(name, PopoverManager)
-        PopoverManager.popover_buttons[name] = popover_button
-        return popover_button
-
-    def popup_at_button(name):
-        if PopoverManager.current_popover_name == name: return
-        if PopoverManager.current_popover_name != None: PopoverManager.popdown()
-
-        button = PopoverManager.popover_buttons[name]
-        allocation = button.compute_bounds(PopoverManager.main_window).out_bounds
-
-        x = allocation.origin.x + allocation.size.width / 2
-        y = allocation.origin.y + allocation.size.height
-
-        popover = PopoverManager.popovers[name]
-        window_width = PopoverManager.main_window.get_width()
-        arrow_width = 10
-        arrow_border_width = 36
-        if x - popover.view.width / 2 < 0:
-            popover.view.set_margin_start(0)
-            popover.view.arrow.set_margin_start(x - arrow_width / 2)
-            popover.view.arrow_border.set_margin_start(x - arrow_border_width / 2)
-        elif x - popover.view.width / 2 > window_width - popover.view.width:
-            popover.view.set_margin_start(window_width - popover.view.width)
-            popover.view.arrow.set_margin_start(x - window_width + popover.view.width - arrow_width / 2)
-            popover.view.arrow_border.set_margin_start(x - window_width + popover.view.width - arrow_border_width / 2)
-        else:
-            popover.view.set_margin_start(x - popover.view.width / 2)
-            popover.view.arrow.set_margin_start(popover.view.width / 2 - arrow_width / 2)
-            popover.view.arrow_border.set_margin_start(popover.view.width / 2 - arrow_border_width / 2)
-        popover.view.set_margin_top(max(0, y))
-
-        PopoverManager.current_popover_name = name
-        PopoverManager.popoverlay.add_overlay(popover.view)
-        PopoverManager.inbetween.set_can_target(True)
-
-        popover.view.grab_focus()
-        button.set_active(True)
-
-        PopoverManager.add_change_code('popup', name)
-
-    def popdown():
-        if PopoverManager.current_popover_name == None: return
-
-        name = PopoverManager.current_popover_name
-        popover = PopoverManager.popovers[name]
-
-        PopoverManager.popoverlay.remove_overlay(popover.view)
-        PopoverManager.current_popover_name = None
-        PopoverManager.inbetween.set_can_target(False)
-
-        popover.view.show_page(None, 'main', Gtk.StackTransitionType.NONE)
-        if name in PopoverManager.popover_buttons:
-            PopoverManager.popover_buttons[name].set_active(False)
-
-        document = PopoverManager.workspace.get_active_document()
-        if document != None:
-            document.source_view.grab_focus()
-
-        PopoverManager.add_change_code('popdown', name)
-
-    def on_click_inbetween(controller, n_press, x, y):
-        PopoverManager.popdown()
 
     def add_change_code(change_code, parameter=None):
         if change_code in PopoverManager.connected_functions:
@@ -157,5 +109,3 @@ class PopoverManager():
             PopoverManager.connected_functions[change_code].discard(callback)
             if len(PopoverManager.connected_functions[change_code]) == 0:
                 del(PopoverManager.connected_functions[change_code])
-
-

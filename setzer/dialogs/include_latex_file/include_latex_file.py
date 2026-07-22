@@ -51,7 +51,7 @@ class IncludeLaTeXFile(object):
         self.view.cancel_button.connect('clicked', self.on_cancel_button_clicked)
         self.view.include_button.connect('clicked', self.on_include_button_clicked)
 
-        self.view.present()
+        self.view.present(self.main_window)
 
     def on_cancel_button_clicked(self, button):
         self.view.close()

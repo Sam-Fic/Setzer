@@ -6,40 +6,45 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, Gtk, Pango
+from gi.repository import Gdk, Gtk
 
-from setzer.app.service_locator import ServiceLocator
-from setzer.app.font_manager import FontManager
-from setzer.popovers.helpers.popover_menu_builder import MenuBuilder
+from setzer.popovers.helpers.standard_popover import StandardMenuPopover
 
 
 class ContextMenu(object):
-    
+    '''Preview right-click (secondary-button) context menu.
+
+    Migrated from MenuBuilder.create_menu() (PopoverMenu) to StandardMenuPopover.
+    Each entry is a plain menu item (add_item, no action); row activation calls
+    button.activate() (emitting 'clicked' for the presenter's callback) and then
+    closes the popover. zoom_in/out store their rows so update_buttons can
+    disable the whole row (insensitive rows are not activatable).
+    '''
+
     def __init__(self, preview, preview_view):
         self.preview = preview
         self.preview_view = preview_view
 
         self.popup_offset_x, self.popup_offset_y = 0, 0
 
-        self.popover_pointer = MenuBuilder.create_menu()
+        self.popover_pointer = StandardMenuPopover()
         self.popover_pointer.set_position(Gtk.PositionType.BOTTOM)
         self.popover_pointer.set_parent(self.preview_view.content.content)
         self.popover_pointer.set_size_request(260, -1)
         self.popover_pointer.set_has_arrow(False)
         self.popover_pointer.set_offset(130, 0)
         self.popover_pointer.set_can_focus(False)
-        self.popover_pointer.connect('closed', self.on_popover_close)
         self.build_popover(self.popover_pointer)
 
         self.update_buttons()
@@ -60,26 +65,18 @@ class ContextMenu(object):
         return True
 
     def build_popover(self, popover):
-        button_backward_sync = self.create_button(_('Show Source'), self.show_source)
-        popover.add_widget(button_backward_sync)
+        self.add_callback_button(popover, _('Show Source'), self.show_source)
+        popover.add_separator()
+        self.button_zoom_in = self.add_callback_button(popover, _('Zoom In'), self.zoom_in)
+        self.button_zoom_out = self.add_callback_button(popover, _('Zoom Out'), self.zoom_out)
+        self.add_callback_button(popover, _('Fit to Width'), self.zoom_fit_to_width)
+        self.add_callback_button(popover, _('Fit to Text Width'), self.zoom_fit_to_text_width)
+        self.add_callback_button(popover, _('Fit to Height'), self.zoom_fit_to_height)
 
-        popover.add_widget(Gtk.Separator(orientation=Gtk.Orientation.HORIZONTAL))
-
-        self.button_zoom_in = self.create_button(_('Zoom In'), self.zoom_in)
-        popover.add_widget(self.button_zoom_in)
-        self.button_zoom_out = self.create_button(_('Zoom Out'), self.zoom_out)
-        popover.add_widget(self.button_zoom_out)
-        button_fit_to_width = self.create_button(_('Fit to Width'), self.zoom_fit_to_width)
-        popover.add_widget(button_fit_to_width)
-        button_fit_to_text_width = self.create_button(_('Fit to Text Width'), self.zoom_fit_to_text_width)
-        popover.add_widget(button_fit_to_text_width)
-        button_fit_to_height = self.create_button(_('Fit to Height'), self.zoom_fit_to_height)
-        popover.add_widget(button_fit_to_height)
-
-    def create_button(self, label, callback):
-        button = MenuBuilder.create_button(label)
-        button.connect('clicked', callback)
-        return button
+    def add_callback_button(self, popover, label, callback):
+        row = popover.add_item(label)
+        row.get_child().connect('clicked', callback)
+        return row
 
     def popup_at_cursor(self, x, y):
         rect = Gdk.Rectangle()
@@ -89,9 +86,6 @@ class ContextMenu(object):
         rect.height = 1
         self.popover_pointer.set_pointing_to(rect)
         self.popover_pointer.popup()
-
-    def on_popover_close(self, popover):
-        pass
 
     def show_source(self, button):
         self.preview.init_backward_sync(self.popup_offset_x, self.popup_offset_y)
@@ -122,5 +116,3 @@ class ContextMenu(object):
 
         self.button_zoom_in.set_sensitive(zoom_level != None and zoom_level < 4)
         self.button_zoom_out.set_sensitive(zoom_level != None and zoom_level > 0.25)
-
-

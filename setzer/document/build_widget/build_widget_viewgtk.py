@@ -25,7 +25,6 @@ class BuildWidgetView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.add_css_class('build-widget')
         self.set_can_focus(False)
 
         self.timer = 0
@@ -33,9 +32,14 @@ class BuildWidgetView(Gtk.Box):
         self.state_change_count = 0
         
         self.build_button = Gtk.Button()
-        self.build_button.set_child(Gtk.Image(icon_name='builder-build-symbolic'))
+        build_icon = Gtk.Image(icon_name='system-run-symbolic')
+        build_content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+        build_content.append(build_icon)
+        build_content.append(Gtk.Label(label=_('Save and Build')))
+        self.build_button.set_child(build_content)
         self.build_button.set_tooltip_text(_('Save and build .pdf-file from document') + ' (F5)')
         self.build_button.set_action_name('win.save-and-build')
+        self.build_button.add_css_class('suggested-action')
 
         self.stop_button = Gtk.Button()
         self.stop_button.set_child(Gtk.Image(icon_name='process-stop-symbolic'))
@@ -48,13 +52,12 @@ class BuildWidgetView(Gtk.Box):
         self.build_timer = Gtk.Revealer()
         self.build_timer.set_transition_type(Gtk.RevealerTransitionType.CROSSFADE)
         self.label = Gtk.Label(label='')
-        self.label.add_css_class('build-timer')
         self.build_timer.set_child(self.label)
 
-        self.prepend(self.clean_button)
-        self.prepend(self.build_button)
+        self.append(self.clean_button)
+        self.append(self.build_timer)
         self.prepend(self.stop_button)
-        self.prepend(self.build_timer)
+        self.prepend(self.build_button)
         
     def start_timer(self):
         self.timer_active = True

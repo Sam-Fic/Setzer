@@ -226,13 +226,17 @@ class StandardMenuViewBase(StandardMenuPopover):
                                       GLib.Variant('as', command), icon, shortcut)
 
     def add_action_button(self, pagename, title, action_name, parameter=None, icon=None, shortcut=None):
-        self.pages[pagename].add_item(title, action_name, parameter, icon, shortcut)
+        return self.pages[pagename].add_item(title, action_name, parameter, icon, shortcut)
 
     def add_widget(self, widget, pagename='main'):
-        self.pages[pagename].add_custom(widget)
+        return self.pages[pagename].add_custom(widget)
 
     def add_separator(self, pagename='main'):
-        self.pages[pagename].add_separator()
+        # 'main' 页就是 self（见 __init__ 的 self.pages = {'main': self}），
+        # 直接调父类 StandardMenuPopover.add_separator，否则会无限自递归。
+        if pagename == 'main':
+            return StandardMenuPopover.add_separator(self)
+        return self.pages[pagename].add_separator()
 
     def set_width(self, width):
         self.set_size_request(width, -1)

@@ -40,7 +40,7 @@ class ContextMenu(object):
 
         if keyval == Gdk.keyval_from_name('F12'):
             if state & modifiers == 0:
-                self.popover_manager.popdown()
+                self.view.popdown()
                 return True
 
         return False

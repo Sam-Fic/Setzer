@@ -29,7 +29,7 @@ class AddRemovePackagesDialogView(DialogView):
     def __init__(self, main_window):
         DialogView.__init__(self, main_window)
 
-        self.set_default_size(650, -1)
+        self.set_content_width(650)
         self.set_can_focus(False)
         self.headerbar.set_title_widget(Gtk.Label(label=_('Add / Remove Packages')))
         self.topbox.set_size_request(650, -1)
@@ -119,10 +119,6 @@ class AddRemovePackagesDialogView(DialogView):
         elif val1 < val2:
             return -1
 
-    def run(self):
-        return self.dialog.run()
-        
-    def __del__(self):
-        self.dialog.destroy()
+
 
 

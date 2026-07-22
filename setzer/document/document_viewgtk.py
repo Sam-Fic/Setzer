@@ -41,7 +41,7 @@ class DocumentView(Gtk.Box):
         self.scrolled_window.set_child(self.source_view)
         self.scrolled_window.set_hexpand(True)
 
-        self.margin = Gtk.DrawingArea()
+        self.margin = Gtk.Box()
         self.margin.set_hexpand(False)
 
         self.hbox = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)

@@ -26,3 +26,4 @@ class Preferences(Adw.PreferencesDialog):
     def __init__(self):
         Adw.PreferencesDialog.__init__(self)
         self.set_title(_('Preferences'))
+        self.set_search_enabled(True)

@@ -34,7 +34,6 @@ class BuildLogView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.add_css_class('buildlog')
 
         self.list = BuildLogList(self)
 

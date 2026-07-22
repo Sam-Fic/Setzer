@@ -560,6 +560,6 @@ class Actions(object):
         DialogLocator.get_dialog('about').run()
 
     def show_context_menu(self, action=None, parameter=''):
-        PopoverManager.popup_at_button('context_menu')
+        PopoverManager.create_popover('context_menu').view.popup()
 
 

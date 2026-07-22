@@ -50,7 +50,6 @@ class PreviewView(Gtk.Box):
         self.target_label.set_halign(Gtk.Align.START)
         self.target_label.set_valign(Gtk.Align.END)
         self.target_label.set_can_target(False)
-        self.target_label.add_css_class('target-label')
         self.overlay.add_overlay(self.target_label)
         self.set_link_target_string('')
 
@@ -67,9 +66,8 @@ class BlankSlateView(Gtk.Box):
     def __init__(self):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
-        self.add_css_class('preview_blank')
 
-        drawing_area = Gtk.DrawingArea()
+        drawing_area = Gtk.Box()
         drawing_area.set_vexpand(True)
         self.append(drawing_area)
 
@@ -78,7 +76,6 @@ class BlankSlateView(Gtk.Box):
         self.append(image)
 
         header = Gtk.Label(label=_('No preview available'))
-        header.add_css_class('header')
         self.append(header)
 
         body = Gtk.Label(label=_('To show a .pdf preview of your document, click the build button in the headerbar.'))
@@ -86,7 +83,7 @@ class BlankSlateView(Gtk.Box):
         body.set_wrap(True)
         self.append(body)
 
-        drawing_area = Gtk.DrawingArea()
+        drawing_area = Gtk.Box()
         drawing_area.set_vexpand(True)
         self.append(drawing_area)
 

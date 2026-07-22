@@ -147,14 +147,11 @@ class SymbolsPage(object):
     def update_labels(self):
         offset = self.view.symbols_view_recent.get_allocated_height() + self.view.tabs.get_allocated_height() + 1
         scrolling_offset = self.view.scrolled_window.get_vadjustment().get_value()
-        self.view.tabs_box.remove_css_class('no-border')
         for key, symbols_view in enumerate(self.view.symbols_views):
             label = self.view.labels[key]
             placeholder = self.view.placeholders[len(self.view.symbols_views) - key - 1]
             margin_top = max(0, offset - int(scrolling_offset))
             label.set_margin_top(margin_top)
-            if margin_top > 1 and margin_top <= label.get_allocated_height():
-                self.view.tabs_box.add_css_class('no-border')
             if len(symbols_view.visible_symbols) > 0:
                 offset += symbols_view.get_allocated_height() + self.view.tabs.get_allocated_height()
 
@@ -265,34 +262,11 @@ class SymbolsPage(object):
             allocation = symbols_view.get_allocation()
             if symbols_view.size != (allocation.width, allocation.height):
                 symbols_view.size = (allocation.width, allocation.height)
-                self.update_borders(symbols_view, allocation.width)
 
         view = self.view.symbols_view_recent
         allocation = view.get_allocation()
         if self.recent_view_size != (allocation.width, allocation.height):
             self.recent_view_size = (allocation.width, allocation.height)
-
-            for number, recent_symbol in enumerate(self.recent_details):
-                image = recent_symbol[5]
-                image.remove_css_class('no_right_border')
-
-            for offset in range(max(0, allocation.height) // 20 + 1):
-                widget = view.get_child_at_pos(allocation.width - 1, offset * 20)
-                if widget != None:
-                    widget.get_child().add_css_class('no_right_border')
-
-    def update_borders(self, symbols_view, width_available):
-        width_with_border = symbols_view.symbol_width + 11
-        symbols_per_line = int((width_available) / width_with_border)
-
-        if symbols_per_line == 0 or len(symbols_view.visible_symbols) == 0:
-            return
-
-        for number, image in enumerate(symbols_view.visible_symbols):
-            if (number % symbols_per_line) == symbols_per_line - 1:
-                image[5].add_css_class('no_right_border')
-            else:
-                image[5].remove_css_class('no_right_border')
 
     def scroll_view(self, position, duration=0.2):
         adjustment = self.view.scrolled_window.get_vadjustment()

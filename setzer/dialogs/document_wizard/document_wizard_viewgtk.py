@@ -29,9 +29,11 @@ class DocumentWizardView(DialogView):
     def __init__(self, main_window):
         DialogView.__init__(self, main_window)
 
-        self.set_default_size(750, 500)
+        self.set_content_width(750)
+        self.set_content_height(500)
         self.headerbar.set_title_widget(Gtk.Label(label=_('Add / Remove Packages')))
-        self.headerbar.set_show_title_buttons(False)
+        self.headerbar.set_show_start_title_buttons(False)
+        self.headerbar.set_show_end_title_buttons(False)
         self.topbox.set_size_request(750, 450)
 
         self.center_box = Gtk.CenterBox()

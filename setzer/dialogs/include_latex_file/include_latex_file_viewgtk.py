@@ -31,10 +31,10 @@ class IncludeLaTeXFileView(DialogView):
     def __init__(self, main_window):
         DialogView.__init__(self, main_window)
 
-        self.set_default_size(400, -1)
+        self.set_content_width(400)
         self.set_can_focus(False)
-        self.add_css_class('include-latex-file-dialog')
-        self.headerbar.set_show_title_buttons(False)
+        self.headerbar.set_show_start_title_buttons(False)
+        self.headerbar.set_show_end_title_buttons(False)
         self.headerbar.set_title_widget(Gtk.Label(label=_('Include LaTeX file')))
         self.topbox.set_size_request(400, -1)
 

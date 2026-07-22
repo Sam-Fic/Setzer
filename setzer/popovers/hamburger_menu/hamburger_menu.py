@@ -51,47 +51,42 @@ class HamburgerMenu(object):
         main_window.add_action(action_open)
 
     def build_static_items(self):
-        self.menu_model.append(_('Save Document As…'), 'win.save-as')
-        self.menu_model.append(_('Save All Documents'), 'win.save-all')
-
-        self.menu_model.append_item(self.separator())
+        # GMenu 的分隔线由 section 自动渲染：每个 append_section 之间出一条标准分隔线，
+        # 不要用自定义 role=separator 的 MenuItem（会被 Gtk 渲染成空白行=空白项 bug）。
+        section_save = Gio.Menu()
+        section_save.append(_('Save Document As…'), 'win.save-as')
+        section_save.append(_('Save All Documents'), 'win.save-all')
+        self.menu_model.append_section(None, section_save)
 
         self.session_section = Gio.Menu()
-        session_item = Gio.MenuItem.new_submenu(_('Session'), self.session_section)
-        self.menu_model.append_item(session_item)
+        self.menu_model.append_submenu(_('Session'), self.session_section)
 
-        self.menu_model.append_item(self.separator())
+        section_prefs = Gio.Menu()
+        section_prefs.append(_('Preferences'), 'win.show-preferences-dialog')
+        self.menu_model.append_section(None, section_prefs)
 
-        self.menu_model.append(_('Preferences'), 'win.show-preferences-dialog')
-
-        self.menu_model.append_item(self.separator())
-
+        section_help = Gio.Menu()
         shortcuts = Gio.MenuItem.new(_('Keyboard Shortcuts'), 'win.show-shortcuts-dialog')
         shortcuts.set_attribute_value('accel', GLib.Variant('s', '<Ctrl>question'))
-        self.menu_model.append_item(shortcuts)
-        self.menu_model.append(_('About'), 'win.show-about-dialog')
+        section_help.append_item(shortcuts)
+        section_help.append(_('About'), 'win.show-about-dialog')
+        self.menu_model.append_section(None, section_help)
 
-        self.menu_model.append_item(self.separator())
-
-        self.menu_model.append(_('Close All Documents'), 'win.close-all-documents')
+        section_close = Gio.Menu()
+        section_close.append(_('Close All Documents'), 'win.close-all-documents')
         close_doc = Gio.MenuItem.new(_('Close Document'), 'win.close-active-document')
         close_doc.set_attribute_value('accel', GLib.Variant('s', '<Ctrl>w'))
-        self.menu_model.append_item(close_doc)
+        section_close.append_item(close_doc)
         quit_item = Gio.MenuItem.new(_('Quit'), 'win.quit')
         quit_item.set_attribute_value('accel', GLib.Variant('s', '<Ctrl>q'))
-        self.menu_model.append_item(quit_item)
-
-    @staticmethod
-    def separator():
-        item = Gio.MenuItem.new()
-        item.set_attribute_value('role', GLib.Variant('s', 'separator'))
-        return item
+        section_close.append_item(quit_item)
+        self.menu_model.append_section(None, section_close)
 
     def build_session_submenu(self):
         self.session_section.remove_all()
         self.session_section.append(_('Restore Previous Session…'), 'win.restore-session')
         self.session_section.append(_('Save Current Session…'), 'win.save-session')
-        self.session_section.append_item(self.separator())
+        # Recent Sessions 作为 labeled section，自带分隔线，无需手动 separator
         self.recent_section = Gio.Menu()
         self.recent_item = Gio.MenuItem.new_section(_('Recent Sessions'), self.recent_section)
         self.session_section.append_item(self.recent_item)

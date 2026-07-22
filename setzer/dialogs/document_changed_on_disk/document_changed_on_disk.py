@@ -6,19 +6,19 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 
 import gi
-gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
+gi.require_version('Adw', '1')
+from gi.repository import Adw
 
 
 class DocumentChangedOnDiskDialog(object):
@@ -38,16 +38,15 @@ class DocumentChangedOnDiskDialog(object):
         self.view.choose(self.main_window, None, self.dialog_process_response)
 
     def setup(self, document):
-        self.view = Gtk.AlertDialog()
-        self.view.set_modal(True)
-        self.view.set_message(_('Document »{document}« has changed on disk.').format(document=document.get_displayname()))
-        self.view.set_detail(_('Should Setzer reload it now?'))
-        self.view.set_buttons([_('_Keep the current Version'), _('_Reload from Disk')])
-        self.view.set_cancel_button(0)
-        self.view.set_default_button(1)
+        self.view = Adw.AlertDialog(
+            heading=_('Document »{document}« has changed on disk.').format(document=document.get_displayname()),
+            body=_('Should Setzer reload it now?'))
+        self.view.add_response('keep', _('Keep the current Version'))
+        self.view.add_response('reload', _('Reload from Disk'))
+        self.view.set_response_appearance('reload', Adw.ResponseAppearance.SUGGESTED)
+        self.view.set_default_response('reload')
+        self.view.set_close_response('keep')
 
     def dialog_process_response(self, dialog, result):
-        index = dialog.choose_finish(result)
-        self.callback(index == 1)
-
-
+        response_id = dialog.choose_finish(result)
+        self.callback(response_id == 'reload')

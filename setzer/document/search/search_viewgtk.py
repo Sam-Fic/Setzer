@@ -32,20 +32,17 @@ class SearchBar(Gtk.Revealer):
         self.box = Gtk.CenterBox()
         self.box.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.super_box.append(self.box)
-        self.super_box.add_css_class('search_bar')
 
         self.left_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.replace_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
         self.entry = SearchEntry()
-        self.entry.add_css_class('search_entry')
 
         self.arrow = Gtk.Image(icon_name='go-next-symbolic')
         self.arrow.set_margin_start(6)
 
         self.replace_entry = Gtk.Entry()
         self.replace_entry.set_width_chars(4)
-        self.replace_entry.add_css_class('replace_entry')
         self.replace_entry.set_size_request(105, -1)
         self.replace_entry.set_margin_start(6)
 
@@ -78,7 +75,6 @@ class SearchBar(Gtk.Revealer):
         self.match_counter.set_xalign(1)
         self.match_counter.set_hexpand(False)
         self.match_counter.set_property('can-target', False)
-        self.match_counter.add_css_class('search_match_counter')
 
         self.overlay_wrapper = Gtk.Overlay()
         self.overlay_wrapper.set_child(self.super_box)

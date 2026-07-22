@@ -6,12 +6,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
@@ -33,16 +33,17 @@ class LabelsSection(object):
 
         self.labels = list()
 
-    def on_button_press(self, controller, n_press, x, y):
-        if n_press == 1:
-            item_num = max(0, min(int((y - 9) // self.view.line_height), len(self.labels) - 1))
+    def on_row_activated(self, row):
+        label = row.item_data
+        if label is None:
+            return
 
-            document = self.labels[item_num][2]
-            line_number = document.source_buffer.get_iter_at_offset(self.labels[item_num][1]).get_line()
-            self.data_provider.workspace.set_active_document(document)
-            document.place_cursor(line_number)
-            document.scroll_cursor_onscreen()
-            self.data_provider.workspace.active_document.view.source_view.grab_focus()
+        document = label[2]
+        line_number = document.source_buffer.get_iter_at_offset(label[1]).get_line()
+        self.data_provider.workspace.set_active_document(document)
+        document.place_cursor(line_number)
+        document.scroll_cursor_onscreen()
+        self.data_provider.workspace.active_document.view.source_view.grab_focus()
 
     #@timer
     def update_items(self, *params):
@@ -58,16 +59,7 @@ class LabelsSection(object):
         labels.sort(key=lambda label: label[0].lower())
         self.labels = labels
 
-        if len(labels) == 0:
-            self.height = 0
-        else:
-            self.height = len(labels) * self.view.line_height + 33
-
         self.view.set_visible(len(labels) != 0)
         self.headline_labels['inline'].set_visible(len(labels) != 0)
 
-        self.view.set_size_request(-1, self.height)
-        self.view.set_hover_item(None)
-        self.view.queue_draw()
-
-
+        self.view.populate()

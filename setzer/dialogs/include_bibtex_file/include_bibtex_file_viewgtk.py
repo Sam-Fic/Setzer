@@ -31,10 +31,11 @@ class IncludeBibTeXFileView(DialogView):
     def __init__(self, main_window):
         DialogView.__init__(self, main_window)
 
-        self.set_default_size(400, 300)
+        self.set_content_width(400)
+        self.set_content_height(300)
         self.set_can_focus(False)
-        self.add_css_class('include-bibtex-file-dialog')
-        self.headerbar.set_show_title_buttons(False)
+        self.headerbar.set_show_start_title_buttons(False)
+        self.headerbar.set_show_end_title_buttons(False)
         self.headerbar.set_title_widget(Gtk.Label(label=_('Include BibTeX file')))
         self.topbox.set_size_request(400, -1)
 
@@ -82,7 +83,6 @@ class IncludeBibTeXFileView(DialogView):
 
         self.preview_stack_wrapper_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.preview_stack_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.preview_stack_wrapper.add_css_class('stack-wrapper')
         self.preview_stack_wrapper.set_margin_top(18)
         self.preview_stack_wrapper.set_margin_bottom(18)
         self.preview_stack = Gtk.Stack()
@@ -92,7 +92,6 @@ class IncludeBibTeXFileView(DialogView):
 
         self.natbib_preview_stack_wrapper_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.natbib_preview_stack_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.natbib_preview_stack_wrapper.add_css_class('stack-wrapper')
         self.natbib_preview_stack_wrapper.set_margin_top(18)
         self.natbib_preview_stack_wrapper.set_margin_bottom(18)
         self.natbib_preview_stack = Gtk.Stack()

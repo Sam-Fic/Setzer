@@ -155,7 +155,6 @@
 ./setzer/helpers/__init__.py
 ./setzer/helpers/observable.py
 ./setzer/helpers/path.py
-./setzer/helpers/popover_menu_builder.py
 ./setzer/helpers/timer.py
 ./setzer/widgets/animated_paned/animated_paned.py
 ./setzer/widgets/animated_paned/__init__.py

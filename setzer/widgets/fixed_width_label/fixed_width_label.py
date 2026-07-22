@@ -6,42 +6,32 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gdk, Pango, PangoCairo
-
-from setzer.app.color_manager import ColorManager
+from gi.repository import Gtk
 
 
-class FixedWidthLabel(Gtk.DrawingArea):
+class FixedWidthLabel(Gtk.Label):
+    '''A label with a fixed minimum width.
+
+    Replaces the former Gtk.DrawingArea + Pango.Layout hand-drawing with a
+    plain Gtk.Label, using set_size_request for the fixed width and
+    set_xalign for horizontal alignment.
+    '''
 
     def __init__(self, width):
-        Gtk.DrawingArea.__init__(self)
-
+        Gtk.Label.__init__(self)
         self.set_size_request(width, -1)
-        self.layout = Pango.Layout(self.get_pango_context())
-        self.layout.set_text('')
-        self.layout.set_width(width * Pango.SCALE)
-        self.layout.set_alignment(Pango.Alignment.CENTER)
-        self.set_draw_func(self.draw)
-        self.queue_draw()
-
-    def set_text(self, text):
-        self.layout.set_text(text)
-        self.queue_draw()
-
-    def draw(self, drawing_area, ctx, width, height):
-        fg_color = ColorManager.get_ui_color('window_fg_color')
-        Gdk.cairo_set_source_rgba(ctx, fg_color)
-        PangoCairo.show_layout(ctx, self.layout)
-
-
+        self.set_xalign(0.5)
+        self.set_halign(Gtk.Align.CENTER)
+        self.set_justify(Gtk.Justification.CENTER)
+        self.set_text('')

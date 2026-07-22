@@ -29,12 +29,11 @@ class HelpPanelView(Gtk.Box):
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.add_css_class('help')
 
-        self.action_bar = Gtk.CenterBox()
-        self.action_bar.set_size_request(-1, 37)
+        self.action_bar = Gtk.ActionBar()
         self.action_bar_left = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.action_bar_right = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.action_bar.set_start_widget(self.action_bar_left)
-        self.action_bar.set_end_widget(self.action_bar_right)
+        self.action_bar.pack_start(self.action_bar_left)
+        self.action_bar.pack_end(self.action_bar_right)
 
         self.home_button = Gtk.Button(icon_name='go-home-symbolic')
         self.home_button.set_tooltip_text(_('Home'))
@@ -129,7 +128,6 @@ class SearchResultView(Gtk.ListBoxRow):
         self.location_label = Gtk.Label()
         self.location_label.set_markup('' + data[2] + '')
         self.location_label.set_xalign(0)
-        self.location_label.add_css_class('location-label')
         self.box.append(self.text_label)
         self.box.append(self.location_label)
         self.set_child(self.box)

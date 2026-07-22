@@ -45,7 +45,6 @@ class Sidebar(object):
     def create_document_structure_page(self):
         self.document_structure_page = document_structure_page.DocumentStructurePage()
         self.document_structure_page.set_size_request(252, -1)
-        self.document_structure_page.add_css_class('sidebar-document-structure')
 
         self.files_section = files_section.FilesSection(self.data_provider)
         self.document_structure_page.add_content_widget('files', self.files_section.view)

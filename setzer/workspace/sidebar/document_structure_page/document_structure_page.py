@@ -53,7 +53,6 @@ class DocumentStructurePage(Gtk.Overlay):
     def add_label(self, name, text):
         label_inline = Gtk.Label(label=text)
         label_inline.set_xalign(0)
-        label_inline.add_css_class('headline')
         self.content_vbox.append(label_inline)
         self.content_vbox_children.append(label_inline)
 
@@ -62,7 +61,6 @@ class DocumentStructurePage(Gtk.Overlay):
         label_overlay.set_halign(Gtk.Align.START)
         label_overlay.set_valign(Gtk.Align.START)
         label_overlay.set_size_request(148, -1)
-        label_overlay.add_css_class('overlay')
         label_overlay.set_can_target(False)
         self.add_overlay(label_overlay)
 
@@ -87,7 +85,6 @@ class DocumentStructurePage(Gtk.Overlay):
 
         self.tabs_box = Gtk.CenterBox()
         self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.tabs_box.add_css_class('tabs-box')
         self.tabs_box.set_start_widget(Gtk.Label(label='Files'))
         self.tabs_box.set_end_widget(self.tabs)
         self.vbox.append(self.tabs_box)
@@ -114,14 +111,10 @@ class DocumentStructurePage(Gtk.Overlay):
             for label_name in self.labels:
                 self.labels[label_name]['overlay'].set_visible(False)
         else:
-            self.tabs_box.remove_css_class('no-border')
             for label_name, label_offset in zip(self.labels, self.get_label_offsets()):
                 margin_top = max(0, label_offset - int(scrolling_offset))
                 self.labels[label_name]['overlay'].set_visible(True)
                 self.labels[label_name]['overlay'].set_margin_top(margin_top)
-
-                if margin_top > 0 and margin_top <= tabs_height:
-                    self.tabs_box.add_css_class('no-border')
 
     def on_next_button_clicked(self, button):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()

@@ -57,7 +57,7 @@ class IncludeBibTeXFile(object):
         self.view.include_button.set_sensitive(False)
         self.view.file_chooser_button.reset()
 
-        self.view.present()
+        self.view.present(self.main_window)
 
     def on_cancel_button_clicked(self, button):
         self.view.close()

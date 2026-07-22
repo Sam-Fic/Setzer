@@ -42,7 +42,7 @@ class AddRemovePackagesDialog(object):
         self.document = document
 
         self.setup()
-        self.view.present()
+        self.view.present(self.main_window)
 
     def setup(self):
         self.view = view.AddRemovePackagesDialogView(self.main_window)

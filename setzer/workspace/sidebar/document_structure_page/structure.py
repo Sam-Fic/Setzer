@@ -6,12 +6,12 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
@@ -36,18 +36,16 @@ class StructureSection(object):
         self.nodes = list()
         self.nodes_in_line = list()
 
-    def on_button_press(self, controller, n_press, x, y):
-        if n_press != 1: return
+    def on_row_activated(self, row):
+        node = row.item_data
+        if node is None:
+            return
 
-        item_num = int((y - 9) // self.view.line_height)
-        if item_num < 0 or item_num >= len(self.nodes_in_line): return
-
-        item = self.nodes_in_line[item_num]['item']
-
+        item = node['item']
         document = item[0]
         line_number = item[1]
-        if document == None:
-            filename = self.nodes_in_line[item_num]['item'][3]
+        if document is None:
+            filename = item[3]
             document = self.data_provider.workspace.open_document_by_filename(filename)
         self.data_provider.workspace.set_active_document(document)
         document.place_cursor(line_number)
@@ -109,18 +107,9 @@ class StructureSection(object):
             for i in range(level + 1, 8):
                 predecessor[i] = node
 
-        if len(nodes_in_line) == 0:
-            self.view.height = 0
-        else:
-            self.view.height = len(nodes_in_line) * self.view.line_height + 33
-
         self.view.set_visible(len(nodes_in_line) != 0)
         self.labels['inline'].set_visible(len(nodes_in_line) != 0)
 
-        self.view.set_size_request(-1, self.view.height)
         self.nodes_in_line = nodes_in_line
         self.nodes = nodes
-        self.view.set_hover_item(None)
-        self.view.queue_draw()
-
-
+        self.view.populate()

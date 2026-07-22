@@ -25,7 +25,6 @@ import os.path
 
 from setzer.app.service_locator import ServiceLocator
 from setzer.dialogs.dialog_locator import DialogLocator
-from setzer.popovers.helpers.popover_menu_builder import MenuBuilder
 from setzer.popovers.popover_manager import PopoverManager
 
 
@@ -100,24 +99,23 @@ class Headerbar(object):
         self.view.save_document_button.set_visible(False)
         self.view.center_button.set_sensitive(False)
         self.view.center_widget.set_visible_child_name('welcome')
-        self.view.add_css_class('welcome')
+        self.view.widget.add_css_class('welcome')
 
     def activate_document_mode(self):
         self.view.save_document_button.set_visible(True)
         self.view.center_button.set_sensitive(True)
         self.view.center_widget.set_visible_child_name('button')
-        self.view.remove_css_class('welcome')
+        self.view.widget.remove_css_class('welcome')
 
     def show_document_name(self, document):
         mod_text = '*' if document.source_buffer.get_modified() else ''
-        self.view.document_name_label.set_text(document.get_basename() + mod_text)
+        self.view.document_title.set_title(document.get_basename() + mod_text)
         dirname = document.get_dirname()
         if dirname != '':
             folder_text = dirname.replace(os.path.expanduser('~'), '~')
-            self.view.document_folder_label.set_text(folder_text)
-            self.view.document_folder_label.set_visible(True)
+            self.view.document_title.set_subtitle(folder_text)
         else:
-            self.view.document_folder_label.set_visible(False)
+            self.view.document_title.set_subtitle('')
 
     def update_toggles(self):
         if self.workspace.get_active_latex_document():

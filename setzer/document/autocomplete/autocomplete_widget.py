@@ -17,7 +17,7 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gdk, Pango
+from gi.repository import Gtk, Gdk
 
 import setzer.document.autocomplete.autocomplete_widget_viewgtk as autocomplete_view
 from setzer.app.service_locator import ServiceLocator
@@ -46,7 +46,6 @@ class AutocompleteWidget(object):
         self.focus_controller.connect('leave', self.on_focus_out)
         self.model.document.source_view.add_controller(self.focus_controller)
 
-        self.view.set_draw_func(self.view.draw)
         self.queue_draw()
 
     def on_focus_out(self, widget):
@@ -63,7 +62,7 @@ class AutocompleteWidget(object):
         self.update_margins()
 
         self.view.set_visible(self.model.is_active and self.position_is_visible() and not self.focus_hide)
-        self.view.queue_draw()
+        self.view.populate()
 
     def update_size(self):
         self.line_height = FontManager.get_line_height(self.source_view)

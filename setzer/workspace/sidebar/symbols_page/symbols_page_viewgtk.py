@@ -33,7 +33,6 @@ class SymbolsPageView(Gtk.Box):
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.set_size_request(252, -1)
 
-        self.add_css_class('sidebar-symbols')
 
         self.overlay = Gtk.Overlay()
         self.overlay.set_vexpand(True)
@@ -48,7 +47,6 @@ class SymbolsPageView(Gtk.Box):
         self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.tabs_box.set_valign(Gtk.Align.START)
         self.tabs_box.set_halign(Gtk.Align.FILL)
-        self.tabs_box.add_css_class('tabs-box')
 
         self.tabs = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
@@ -73,7 +71,6 @@ class SymbolsPageView(Gtk.Box):
 
         self.search_revealer = Gtk.Revealer()
         self.search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.search_box.add_css_class('search_bar')
 
         self.search_entry = SearchEntry()
         self.search_entry.set_hexpand(True)
@@ -102,7 +99,6 @@ class SymbolsPageView(Gtk.Box):
         self.label_recent.set_halign(Gtk.Align.START)
         self.label_recent.set_valign(Gtk.Align.START)
         self.label_recent.set_size_request(108, -1)
-        self.label_recent.add_css_class('overlay')
         self.label_recent.set_can_target(False)
         self.overlay.add_overlay(self.label_recent)
 
@@ -136,13 +132,11 @@ class SymbolsPageView(Gtk.Box):
             label.set_halign(Gtk.Align.START)
             label.set_valign(Gtk.Align.START)
             label.set_size_request(108, -1)
-            label.add_css_class('overlay')
             label.set_can_target(False)
             self.overlay.add_overlay(label)
             self.labels.append(label)
             placeholder = Gtk.Label(label=symbols_list[2])
             placeholder.set_xalign(0)
-            placeholder.add_css_class('placeholder')
             self.placeholders.append(placeholder)
             self.vbox.append(placeholder)
             self.symbols_views.append(symbols_list_view)

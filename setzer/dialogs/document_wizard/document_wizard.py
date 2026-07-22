@@ -54,7 +54,7 @@ class DocumentWizard(object):
         self.load_presets()
         self.goto_page(0)
 
-        self.view.present()
+        self.view.present(self.main_window)
 
     def on_cancel_button_clicked(self, button):
         self.view.close()
