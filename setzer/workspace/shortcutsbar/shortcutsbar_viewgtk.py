@@ -24,6 +24,13 @@ from gi.repository import Gio
 from setzer.popovers.helpers.popover_menu_builder import MenuBuilder
 from setzer.app.service_locator import ServiceLocator
 from setzer.popovers.popover_manager import PopoverManager
+from setzer.popovers.shortcutsbar.document_menu import DocumentMenu
+from setzer.popovers.shortcutsbar.beamer_menu import BeamerMenu
+from setzer.popovers.shortcutsbar.bibliography_menu import BibliographyMenu
+from setzer.popovers.shortcutsbar.text_menu import TextMenu
+from setzer.popovers.shortcutsbar.quotes_menu import QuotesMenu
+from setzer.popovers.shortcutsbar.math_menu import MathMenu
+from setzer.popovers.shortcutsbar.object_menu import ObjectMenu
 
 
 class Shortcutsbar(Gtk.Box):
@@ -132,79 +139,72 @@ class Shortcutsbar(Gtk.Box):
         self.top_icons.prepend(self.wizard_button)
 
     def insert_document_button(self):
-        self.current_popover = PopoverManager.create_popover('document_menu')
-
-        self.document_button = PopoverManager.create_popover_button('document_menu')
+        self.document_button = Gtk.MenuButton()
         self.document_button.set_icon_name('application-x-addon-symbolic')
         self.document_button.add_css_class('flat')
         self.document_button.add_css_class('scbar')
         self.document_button.set_tooltip_text(_('Document'))
+        self.document_button.set_popover(DocumentMenu().view)
 
         self.top_icons.prepend(self.document_button)
 
     def insert_beamer_button(self):
-        self.current_popover = PopoverManager.create_popover('beamer_menu')
-
-        self.beamer_button = PopoverManager.create_popover_button('beamer_menu')
+        self.beamer_button = Gtk.MenuButton()
         self.beamer_button.set_icon_name('view-list-bullet-symbolic')
         self.beamer_button.set_tooltip_text(_('Beamer'))
         self.beamer_button.add_css_class('flat')
         self.beamer_button.add_css_class('scbar')
+        self.beamer_button.set_popover(BeamerMenu().view)
 
         self.top_icons.prepend(self.beamer_button)
 
     def insert_bibliography_button(self):
-        self.current_popover = PopoverManager.create_popover('bibliography_menu')
-
-        self.bibliography_button = PopoverManager.create_popover_button('bibliography_menu')
+        self.bibliography_button = Gtk.MenuButton()
         self.bibliography_button.set_icon_name('library-symbolic')
         self.bibliography_button.set_tooltip_text(_('Bibliography'))
         self.bibliography_button.add_css_class('flat')
         self.bibliography_button.add_css_class('scbar')
+        self.bibliography_button.set_popover(BibliographyMenu().view)
 
         self.top_icons.prepend(self.bibliography_button)
 
     def insert_text_button(self):
-        self.current_popover = PopoverManager.create_popover('text_menu')
-
-        self.text_button = PopoverManager.create_popover_button('text_menu')
+        self.text_button = Gtk.MenuButton()
         self.text_button.set_icon_name('text-symbolic')
         self.text_button.set_tooltip_text(_('Text'))
         self.text_button.add_css_class('flat')
         self.text_button.add_css_class('scbar')
+        self.text_button.set_popover(TextMenu().view)
 
         self.top_icons.prepend(self.text_button)
 
     def insert_quotes_button(self):
-        self.current_popover = PopoverManager.create_popover('quotes_menu')
-
-        self.quotes_button = PopoverManager.create_popover_button('quotes_menu')
+        self.quotes_button = Gtk.MenuButton()
         self.quotes_button.set_icon_name('own-quotes-symbolic')
         self.quotes_button.set_tooltip_text(_('Quotes') + ' (' + _('Ctrl') + '+")')
         self.quotes_button.add_css_class('flat')
         self.quotes_button.add_css_class('scbar')
+        self.quotes_button.set_popover(QuotesMenu().view)
 
         self.top_icons.prepend(self.quotes_button)
 
     def insert_math_button(self):
-        self.current_popover = PopoverManager.create_popover('math_menu')
-
-        self.math_button = PopoverManager.create_popover_button('math_menu')
+        self.math_button = Gtk.MenuButton()
         self.math_button.set_icon_name('own-math-menu-symbolic')
         self.math_button.set_tooltip_text(_('Math'))
         self.math_button.add_css_class('flat')
         self.math_button.add_css_class('scbar')
+        self.math_button.set_popover(MathMenu().view)
 
         self.top_icons.prepend(self.math_button)
 
     def insert_object_button(self):
-        self.current_popover = PopoverManager.create_popover('object_menu')
-
-        self.insert_object_button = PopoverManager.create_popover_button('object_menu')
+        self.insert_object_button = Gtk.MenuButton()
         self.insert_object_button.set_icon_name('insert-object-symbolic')
         self.insert_object_button.set_tooltip_text(_('Objects'))
         self.insert_object_button.add_css_class('flat')
         self.insert_object_button.add_css_class('scbar')
+        self.insert_object_button.set_popover(ObjectMenu().view)
 
         self.top_icons.prepend(self.insert_object_button)
 

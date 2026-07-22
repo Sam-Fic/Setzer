@@ -166,6 +166,8 @@
 ./setzer/widgets/__init__.py
 ./setzer/workspace/actions/actions.py
 ./setzer/workspace/actions/__init__.py
+./setzer/workspace/auto_build/auto_build.py
+./setzer/workspace/auto_build/__init__.py
 ./setzer/workspace/build_log/build_log_controller.py
 ./setzer/workspace/build_log/build_log_presenter.py
 ./setzer/workspace/build_log/build_log.py

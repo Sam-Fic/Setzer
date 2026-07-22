@@ -21,7 +21,6 @@ from gi.repository import Gtk, GLib, Gio
 
 from setzer.app.service_locator import ServiceLocator
 from setzer.keyboard_shortcuts.shortcut_controller import ShortcutController
-from setzer.popovers.popover_manager import PopoverManager
 
 
 class ShortcutControllerLaTeX(ShortcutController):
@@ -62,6 +61,6 @@ class ShortcutControllerLaTeX(ShortcutController):
         self.main_window.app.set_accels_for_action(Gio.Action.print_detailed_name('win.insert-symbol', GLib.Variant('as', parameter)), accels)
 
     def shortcut_quotes(self, accel_group=None, window=None, key=None, mask=None):
-        PopoverManager.popup_at_button('quotes_menu')
+        self.main_window.shortcutsbar.quotes_button.activate()
 
 

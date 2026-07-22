@@ -20,20 +20,19 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk
 from gi.repository import GLib
 
-from setzer.popovers.helpers.popover_menu_builder import MenuBuilder
-from setzer.popovers.helpers.popover import Popover
+from setzer.popovers.helpers.standard_popover import StandardMenuViewBase
 
 
 class BeamerMenu(object):
 
-    def __init__(self, popover_manager):
-        self.view = BeamerMenuView(popover_manager)
+    def __init__(self, popover_manager=None):
+        self.view = BeamerMenuView()
 
 
-class BeamerMenuView(Popover):
+class BeamerMenuView(StandardMenuViewBase):
 
-    def __init__(self, popover_manager):
-        Popover.__init__(self, popover_manager)
+    def __init__(self):
+        StandardMenuViewBase.__init__(self)
 
         self.set_width(288)
 

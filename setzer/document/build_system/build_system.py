@@ -189,9 +189,16 @@ class BuildSystem(Observable):
         if result_blob['build'] != None or result_blob['forward_sync'] != None:
             if result_blob['build'] != None:
                 try:
-                    self.document.preview.set_pdf_filename(result_blob['build']['pdf_filename'])
-                except KeyError: pass
-                self.document.add_change_code('pdf_updated')
+                    pdf_filename = result_blob['build']['pdf_filename']
+                except KeyError:
+                    pdf_filename = None
+                # Only swap the preview's PDF when the build actually
+                # produced one. When the build failed (no PDF), the
+                # previously rendered PDF is kept so the preview does
+                # not flicker to blank between builds.
+                if pdf_filename != None:
+                    self.document.preview.set_pdf_filename(pdf_filename)
+                    self.document.add_change_code('pdf_updated')
 
             if result_blob['forward_sync'] != None:
                 self.document.preview.set_synctex_rectangles(result_blob['forward_sync'])

@@ -93,24 +93,42 @@ class Preview(Observable):
 
     def get_pdf_date(self):
         if self.pdf_filename != None:
-            return os.path.getmtime(self.pdf_filename)
+            try:
+                return os.path.getmtime(self.pdf_filename)
+            except OSError:
+                # the file may have been removed after a failed build;
+                # the in-memory document (if any) is kept for display.
+                return None
         else:
             return None
 
     def load_pdf(self):
-        try:
-            self.poppler_document = Poppler.Document.new_from_file(GLib.filename_to_uri(self.pdf_filename))
-        except Exception:
-            self.reset_pdf_data()
-            return
+        new_document = None
+        if self.pdf_filename != None:
+            try:
+                new_document = Poppler.Document.new_from_file(GLib.filename_to_uri(self.pdf_filename))
+            except Exception:
+                new_document = None
 
-        page_size = self.poppler_document.get_page(0).get_size()
-        self.page_width = page_size.width
-        self.page_height = page_size.height
-        self.update_vertical_margin()
-        self.layout = None
-        self.add_change_code('pdf_changed')
-        self.add_change_code('layout_changed')
+        if new_document != None:
+            # a new PDF was loaded successfully -- replace the old one.
+            self.poppler_document = new_document
+            page_size = self.poppler_document.get_page(0).get_size()
+            self.page_width = page_size.width
+            self.page_height = page_size.height
+            self.update_vertical_margin()
+            self.layout = None
+            self.add_change_code('pdf_changed')
+            self.add_change_code('layout_changed')
+        elif self.poppler_document == None:
+            # nothing new and nothing old to fall back on -- show the
+            # blank slate.
+            self.reset_pdf_data()
+        else:
+            # the new PDF could not be loaded (e.g. it is still being
+            # written or the build failed). Keep showing the previously
+            # rendered PDF so the preview does not flicker to blank.
+            pass
 
     def reset_pdf_data(self):
         self.pdf_filename = None

@@ -54,7 +54,25 @@ class PageBuildSystem(object):
             self.shell_values.index(self.settings.get_value('preferences', 'build_option_system_commands')))
         self.view.option_system_commands.connect('notify::selected', self.on_shell_selected)
 
+        # Auto build
+        self.view.option_auto_build.set_active(self.settings.get_value('preferences', 'auto_build'))
+        self.view.option_auto_build.connect('notify::active', self.on_auto_build_toggled)
+        self.view.option_auto_build_delay.set_property('value', self.settings.get_value('preferences', 'auto_build_delay'))
+        self.view.option_auto_build_delay.connect('notify::value', self.on_delay_changed, 'auto_build_delay')
+        self.update_auto_build_delay_sensitivity()
+
         self.setup_latex_interpreters()
+
+    def on_auto_build_toggled(self, switch, pspec):
+        value = switch.get_active()
+        self.settings.set_value('preferences', 'auto_build', value)
+        self.update_auto_build_delay_sensitivity()
+
+    def on_delay_changed(self, spin, pspec, preference_name):
+        self.settings.set_value('preferences', preference_name, int(spin.get_property('value')))
+
+    def update_auto_build_delay_sensitivity(self):
+        self.view.option_auto_build_delay.set_sensitive(self.view.option_auto_build.get_active())
 
     def on_switch_toggled(self, switch, pspec, preference_name):
         self.settings.set_value('preferences', preference_name, switch.get_active())
@@ -187,6 +205,21 @@ flatpak install org.freedesktop.Sdk.Extension.texlive'''))
         self.option_use_latexmk = Adw.SwitchRow()
         self.option_use_latexmk.set_title(_('Use Latexmk'))
         group_options.add(self.option_use_latexmk)
+
+        group_auto_build = Adw.PreferencesGroup()
+        group_auto_build.set_title(_('Auto Build'))
+        self.add(group_auto_build)
+
+        self.option_auto_build = Adw.SwitchRow()
+        self.option_auto_build.set_title(_('Automatically build and save after changes'))
+        self.option_auto_build.set_subtitle(_('When you stop typing, the document is saved and rebuilt after a short delay.'))
+        group_auto_build.add(self.option_auto_build)
+
+        self.option_auto_build_delay = Adw.SpinRow()
+        self.option_auto_build_delay.set_title(_('Delay (seconds)'))
+        adjustment_auto_build = Gtk.Adjustment(value=2, lower=1, upper=10, step_increment=1)
+        self.option_auto_build_delay.set_adjustment(adjustment_auto_build)
+        group_auto_build.add(self.option_auto_build_delay)
 
         group_build_log = Adw.PreferencesGroup()
         group_build_log.set_title(_('Automatically show build log'))

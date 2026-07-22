@@ -36,6 +36,7 @@ import setzer.workspace.shortcutsbar.shortcutsbar as shortcutsbar
 import setzer.workspace.build_log.build_log as build_log
 import setzer.workspace.actions.actions as actions
 import setzer.workspace.context_menu.context_menu as context_menu
+import setzer.workspace.auto_build.auto_build as auto_build
 from setzer.app.service_locator import ServiceLocator
 from setzer.settings.document_settings import DocumentSettings
 
@@ -76,6 +77,7 @@ class Workspace(Observable):
         self.preview_panel = preview_panel.PreviewPanel(self)
         self.help_panel = help_panel.HelpPanel(self)
         self.build_log = build_log.BuildLog(self)
+        self.auto_build = auto_build.AutoBuild(self)
         self.controller = workspace_controller.WorkspaceController(self)
 
     def open_document_by_filename(self, filename):

@@ -20,20 +20,19 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk
 from gi.repository import GLib
 
-from setzer.popovers.helpers.popover_menu_builder import MenuBuilder
-from setzer.popovers.helpers.popover import Popover
+from setzer.popovers.helpers.standard_popover import StandardMenuViewBase
 
 
 class MathMenu(object):
 
-    def __init__(self, popover_manager):
-        self.view = MathMenuView(popover_manager)
+    def __init__(self, popover_manager=None):
+        self.view = MathMenuView()
 
 
-class MathMenuView(Popover):
+class MathMenuView(StandardMenuViewBase):
 
-    def __init__(self, popover_manager):
-        Popover.__init__(self, popover_manager)
+    def __init__(self):
+        StandardMenuViewBase.__init__(self)
 
         self.set_width(288)
 
@@ -78,24 +77,34 @@ class MathMenuView(Popover):
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         vbox.set_hexpand(True)
         for math_function in ['arccos', 'arcsin', 'arctan', 'cos', 'cosh', 'cot', 'coth', 'csc', 'deg', 'det', 'dim', 'exp', 'gcd', 'hom', 'inf']:
-            button = MenuBuilder.create_button('\\' + math_function)
-            button.set_action_name('win.insert-symbol')
-            button.set_action_target_value(GLib.Variant('as', ['\\' + math_function + ' ']))
-            button.connect('clicked', self.on_closing_button_click)
-            self.register_button_for_keyboard_navigation(button, pagename='math_functions')
+            button = self._make_function_button(math_function)
             vbox.append(button)
         hbox.append(vbox)
         vbox = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         vbox.set_hexpand(True)
         for math_function in ['ker', 'lg', 'lim', 'liminf', 'limsup', 'ln', 'log', 'max', 'min', 'sec', 'sin', 'sinh', 'sup', 'tan', 'tanh']:
-            button = MenuBuilder.create_button('\\' + math_function)
-            button.set_action_name('win.insert-symbol')
-            button.set_action_target_value(GLib.Variant('as', ['\\' + math_function + ' ']))
-            button.connect('clicked', self.on_closing_button_click)
-            self.register_button_for_keyboard_navigation(button, pagename='math_functions')
+            button = self._make_function_button(math_function)
             vbox.append(button)
         hbox.append(vbox)
         self.add_widget(hbox, 'math_functions')
+
+    def _make_function_button(self, math_function):
+        button = Gtk.Button()
+        button.set_has_frame(False)
+        button.add_css_class('flat')
+        button.set_hexpand(True)
+        button.set_halign(Gtk.Align.START)
+        button.set_label('\\' + math_function)
+        button.set_action_name('win.insert-symbol')
+        button.set_action_target_value(GLib.Variant('as', ['\\' + math_function + ' ']))
+        button.connect('clicked', self.on_function_clicked)
+        return button
+
+    def on_function_clicked(self, button):
+        button.activate()
+        if 'math_functions' in self.pages:
+            self.pages['math_functions'].popdown()
+        self.popdown()
 
         # submenu: math font styles
         self.add_page('math_font_styles', _('Math Font Styles'))

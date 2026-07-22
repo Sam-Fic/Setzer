@@ -19,6 +19,8 @@ import gi
 gi.require_version('Gtk', '4.0')
 from gi.repository import Gio, GLib
 
+import os.path
+
 from setzer.app.service_locator import ServiceLocator
 
 
@@ -49,8 +51,9 @@ class PreviewPanelController(object):
         document = self.workspace.get_root_or_active_latex_document()
         if document != None:
             pdf_filename = document.preview.pdf_filename
-            if document.preview.poppler_document != None:
-                Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(pdf_filename))
+            if document.preview.poppler_document != None and pdf_filename != None:
+                if os.path.isfile(pdf_filename):
+                    Gio.AppInfo.launch_default_for_uri(GLib.filename_to_uri(pdf_filename))
 
     def on_recolor_pdf_toggle_toggled(self, toggle_button, parameter=None):
         recolor_pdf = toggle_button.get_active()

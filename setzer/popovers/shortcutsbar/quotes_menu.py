@@ -20,20 +20,19 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk
 from gi.repository import GLib
 
-from setzer.popovers.helpers.popover_menu_builder import MenuBuilder
-from setzer.popovers.helpers.popover import Popover
+from setzer.popovers.helpers.standard_popover import StandardMenuViewBase
 
 
 class QuotesMenu(object):
 
-    def __init__(self, popover_manager):
-        self.view = QuotesMenuView(popover_manager)
+    def __init__(self, popover_manager=None):
+        self.view = QuotesMenuView()
 
 
-class QuotesMenuView(Popover):
+class QuotesMenuView(StandardMenuViewBase):
 
-    def __init__(self, popover_manager):
-        Popover.__init__(self, popover_manager)
+    def __init__(self):
+        StandardMenuViewBase.__init__(self)
 
         self.set_width(288)
 

@@ -23,13 +23,6 @@ from setzer.popovers.new_document.new_document import NewDocument
 from setzer.popovers.document_chooser.document_chooser import DocumentChooser
 from setzer.popovers.document_switcher.document_switcher import DocumentSwitcher
 from setzer.popovers.hamburger_menu.hamburger_menu import HamburgerMenu
-from setzer.popovers.shortcutsbar.math_menu import MathMenu
-from setzer.popovers.shortcutsbar.beamer_menu import BeamerMenu
-from setzer.popovers.shortcutsbar.bibliography_menu import BibliographyMenu
-from setzer.popovers.shortcutsbar.document_menu import DocumentMenu
-from setzer.popovers.shortcutsbar.object_menu import ObjectMenu
-from setzer.popovers.shortcutsbar.quotes_menu import QuotesMenu
-from setzer.popovers.shortcutsbar.text_menu import TextMenu
 from setzer.popovers.preview_zoom_level.preview_zoom_level import PreviewZoomLevel
 from setzer.popovers.context_menu.context_menu import ContextMenu
 from setzer.popovers.helpers.popover_button import PopoverButton
@@ -74,13 +67,6 @@ class PopoverManager():
     def create_popover(name):
         popover = None
         if name == 'hamburger_menu': popover = HamburgerMenu(PopoverManager.workspace)
-        if name == 'beamer_menu': popover = BeamerMenu(PopoverManager)
-        if name == 'bibliography_menu': popover = BibliographyMenu(PopoverManager)
-        if name == 'document_menu': popover = DocumentMenu(PopoverManager)
-        if name == 'math_menu': popover = MathMenu(PopoverManager)
-        if name == 'object_menu': popover = ObjectMenu(PopoverManager)
-        if name == 'quotes_menu': popover = QuotesMenu(PopoverManager)
-        if name == 'text_menu': popover = TextMenu(PopoverManager)
         if name == 'preview_zoom_level': popover = PreviewZoomLevel(PopoverManager, PopoverManager.workspace)
         if name == 'context_menu': popover = ContextMenu(PopoverManager, PopoverManager.workspace)
 
