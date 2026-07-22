@@ -4,3 +4,30 @@ builddir
 .flatpak-builder/
 flatpak/
 ignore
+.trae/
+.vscode/
+
+# Python
+*.pyc
+*.pyo
+*.egg-info/
+*.egg
+dist/
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+
+# Editor / OS
+*~
+*.swp
+*.swo
+*.bak
+*.orig
+*.rej
+.directory
+.idea/
+.DS_Store
+Thumbs.db
+build
