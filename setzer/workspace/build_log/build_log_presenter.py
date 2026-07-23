@@ -36,13 +36,13 @@ class BuildLogPresenter(object):
         self.view.scrolled_window.get_vadjustment().set_value(0)
         self.view.scrolled_window.get_hadjustment().set_value(0)
 
-        # Rebuild the ListStore from the model's current items. Gtk.ListView
-        # handles its own sizing/scrolling, so the former manual
-        # set_size_request + generate_layouts are gone.
+        # 批量替换：splice 一次性移除全部旧项并加入全部新项，仅触发 1 次 items-changed
+        # 信号。原实现 remove_all() + 逐项 append() 触发 N+1 次信号，每次都让
+        # Gtk.ListView + Gtk.SingleSelection 重新布局/同步，N 条日志 = N+1 次重算。
         list_store = self.view.list.list_store
-        list_store.remove_all()
-        for item in self.build_log.items:
-            list_store.append(build_log_view.BuildLogItem(item[0], item[2], item[3], item[4]))
+        new_items = [build_log_view.BuildLogItem(item[0], item[2], item[3], item[4])
+                     for item in self.build_log.items]
+        list_store.splice(0, list_store.get_n_items(), new_items)
 
     def set_header_data(self, errors, warnings, tried_building=False):
         if tried_building:

@@ -238,6 +238,8 @@ class LaTeXLogParser():
 
         matches = self.doc_regex.split(log_text)
         buffer = ''
+        # 收集要移除的 [start, end) 区间，避免循环内 O(n) replace 导致 O(n²)
+        removals = []
         for match in reversed(matches):
             if not self.doc_regex.fullmatch(match):
                 buffer += match
@@ -262,8 +264,26 @@ class LaTeXLogParser():
                             break
                     match = match[:char_count]
                     doc_texts[filename] = match
-                    log_text = log_text.replace(match, '')
+                    # 记录该 match 在原始 log_text 中的位置，稍后统一移除
+                    start = log_text.find(match)
+                    if start >= 0:
+                        removals.append((start, start + len(match)))
                 buffer = ''
+
+        # 一次性按区间剔除所有外部文件片段，O(n) 而非 O(k × n)
+        if removals:
+            removals.sort()
+            pieces = []
+            cursor = 0
+            for start, end in removals:
+                if start < cursor:  # 重叠/嵌套，跳过已移除部分
+                    start = max(start, cursor)
+                if start >= end:
+                    continue
+                pieces.append(log_text[cursor:start])
+                cursor = end
+            pieces.append(log_text[cursor:])
+            log_text = ''.join(pieces)
         doc_texts[tex_filename] = log_text
         return doc_texts
 

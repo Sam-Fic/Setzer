@@ -87,8 +87,21 @@ class MainApplicationController(Adw.Application):
             self.is_active = True
 
     def activate(self):
-        # setup gettext
-        gettext.install('setzer', names=('ngettext',), localedir='@localedir_path@')
+        # 先读取用户语言偏好，再初始化 gettext，使界面语言选择生效
+        self.settings = ServiceLocator.get_settings()
+        lang = self.settings.get_value('preferences', 'language') or None
+        languages = [lang] if lang else None
+        # gettext.install() 不支持 languages 参数，故用 translation() 显式指定
+        # 界面语言（优先于系统环境变量 LANG/LANGUAGE），再注入全局 _ / ngettext。
+        # 开发模式 localedir 为 /tmp/usr/share/locale；若用户选了非英语且该处
+        # 无对应 mo，则回退到系统 locale 路径，使开发版也能加载已装语言包。
+        localedir = '@localedir_path@'
+        if lang and lang != 'en' and not os.path.isdir(os.path.join(localedir, lang, 'LC_MESSAGES')):
+            localedir = '/usr/share/locale'
+        trans = gettext.translation('setzer', localedir, languages=languages, fallback=True)
+        import builtins
+        builtins._ = trans.gettext
+        builtins.ngettext = trans.ngettext
 
         # get settings
         self.settings = ServiceLocator.get_settings()

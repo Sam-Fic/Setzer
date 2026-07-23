@@ -38,8 +38,10 @@ class DocumentController(object):
         self.continue_save_date_loop = True
         self.zoom_threshold = 0
         # 保存 timeout id 以便文档关闭时移除。原实现仅置 continue_save_date_loop=False，
-        # 定时器仍会再触发一次（500ms 内）才退出；直接 remove 更及时。
-        self._save_date_loop_timeout_id = GObject.timeout_add(500, self.save_date_loop)
+        # 定时器仍会再触发一次才退出；直接 remove 更及时。
+        # 2000ms 而非 500ms：检测外部磁盘变更不需要亚秒级响应，2 秒足够
+        # （VS Code/gedit/Kate 均用 2–5 秒）。per-document stat I/O 降低 75%。
+        self._save_date_loop_timeout_id = GObject.timeout_add(2000, self.save_date_loop)
 
         self.primary_click_controller = Gtk.GestureClick()
         self.primary_click_controller.set_button(1)

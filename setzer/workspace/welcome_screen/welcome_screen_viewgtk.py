@@ -27,7 +27,7 @@ def WelcomeScreenView():
     Adw.StatusPage 是 final 类型，无法被子类化，故以工厂函数返回实例，
     替代原来的手绘 Gtk.Box + Gtk.Label 居中布局。'''
     page = Adw.StatusPage()
-    page.set_icon_name('text-x-tex-symbolic')
+    page.set_icon_name('document-latex-symbolic')
     page.set_title(_('Write beautiful LaTeX documents with ease!'))
     page.set_description(_('Click the open or create buttons in the headerbar above to start editing.'))
     return page

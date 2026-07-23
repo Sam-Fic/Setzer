@@ -164,27 +164,16 @@ class GeneralSettingsPageView(PageView):
         self.option_packages['glossaries'] = self._create_package_row('glossaries', 'glossaries')
         self.option_packages['parskip'] = self._create_package_row('parskip', 'parskip')
 
-        self.group_packages_left = Adw.PreferencesGroup()
-        self.group_packages_left.set_title(_('Packages'))
-        for name in ['ams', 'textcomp', 'graphicx', 'color', 'xcolor', 'url']:
-            self.group_packages_left.add(self.option_packages[name])
-
-        self.group_packages_right = Adw.PreferencesGroup()
-        for name in ['hyperref', 'theorem', 'listings', 'glossaries', 'parskip']:
-            self.group_packages_right.add(self.option_packages[name])
+        self.group_packages = Adw.PreferencesGroup()
+        self.group_packages.set_title(_('Packages'))
+        for name in ['ams', 'textcomp', 'graphicx', 'color', 'xcolor', 'url', 'hyperref', 'theorem', 'listings', 'glossaries', 'parskip']:
+            self.group_packages.add(self.option_packages[name])
 
         # Layout -------------------------------------------------------------
-        self.top_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
-        self.top_row.append(self.group_document_properties)
-        self.top_row.append(self.group_language)
-
-        self.packages_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
-        self.packages_row.append(self.group_packages_left)
-        self.packages_row.append(self.group_packages_right)
-
         self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        self.content.append(self.top_row)
-        self.content.append(self.packages_row)
+        self.content.append(self.group_document_properties)
+        self.content.append(self.group_language)
+        self.content.append(self.group_packages)
 
         self.append(self.header)
         self.append(self.content)

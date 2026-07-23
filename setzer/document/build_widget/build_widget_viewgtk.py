@@ -61,11 +61,13 @@ class BuildWidgetView(Gtk.Box):
         
     def start_timer(self):
         self.timer_active = True
-        GObject.timeout_add(50, self.increment_timer)
-        
+        # 500ms 而非 50ms：显示格式为 M:SS，每秒只变一次。50ms = 每秒 20 次
+        # 冗余回调；500ms = 每秒 2 次，足够捕获秒翻滚，频率降低 10 倍。
+        GObject.timeout_add(500, self.increment_timer)
+
     def increment_timer(self):
         if self.timer_active:
-            self.timer += 50
+            self.timer += 500
             if self.timer // 1000 >= 1:
                 self.label.set_text('{}:{:02}'.format(self.timer // 60000, (self.timer % 60000) // 1000))
         return self.timer_active

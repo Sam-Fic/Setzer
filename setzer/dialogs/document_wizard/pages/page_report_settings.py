@@ -38,8 +38,8 @@ class ReportSettingsPage(Page):
             if selected != Gtk.INVALID_LIST_POSITION:
                 self.current_values['report']['page_format'] = self.view.page_format_names[selected]
 
-        def scale_change_value(scale, scroll, value, user_data=None):
-            self.current_values['report']['font_size'] = int(value)
+        def font_size_changed(row, pspec):
+            self.current_values['report']['font_size'] = int(row.get_value())
 
         def option_toggled(row, pspec, option_name):
             self.current_values['report']['option_' + option_name] = row.get_active()
@@ -51,7 +51,7 @@ class ReportSettingsPage(Page):
             self.current_values['report']['is_landscape'] = row.get_active()
 
         self.view.page_format_combo.connect('notify::selected', format_changed)
-        self.view.font_size_entry.connect('change-value', scale_change_value)
+        self.view.font_size_entry.connect('notify::value', font_size_changed)
         self.view.option_twocolumn.connect('notify::active', option_toggled, 'twocolumn')
         self.view.option_default_margins.connect('notify::active', self.option_default_margins_toggled, 'default_margins')
         self.view.margins_button_left.connect('notify::value', margin_changed, 'left')
@@ -113,7 +113,7 @@ class ReportSettingsPageView(PageView):
 
         self.group_font_size = Adw.PreferencesGroup()
         self.group_font_size.set_title(_('Font size'))
-        self.group_font_size.add(self.font_size_row)
+        self.group_font_size.add(self.font_size_entry)
 
         self.group_margins = Adw.PreferencesGroup()
         self.group_margins.set_title(_('Page margins'))
@@ -124,17 +124,11 @@ class ReportSettingsPageView(PageView):
         self.group_margins.add(self.margins_button_top)
         self.group_margins.add(self.margins_button_bottom)
 
-        self.left_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
-        self.left_content.append(self.group_options)
-        self.left_content.append(self.group_font_size)
-        self.left_content.append(self.group_margins)
-
-        self.right_content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.right_content.append(self.group_page_format)
-
-        self.content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
-        self.content.append(self.left_content)
-        self.content.append(self.right_content)
+        self.content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=18)
+        self.content.append(self.group_page_format)
+        self.content.append(self.group_options)
+        self.content.append(self.group_font_size)
+        self.content.append(self.group_margins)
 
         self.append(self.header)
         self.append(self.content)

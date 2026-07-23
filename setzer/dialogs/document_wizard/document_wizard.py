@@ -204,7 +204,7 @@ class DocumentWizard(object):
                     self.goto_page_next()
                     return True
                 elif self.current_page == 6:
-                    self.goto_page_prev()
+                    self.on_create_button_clicked(self.view.create_button)
                     return True
         return False
 

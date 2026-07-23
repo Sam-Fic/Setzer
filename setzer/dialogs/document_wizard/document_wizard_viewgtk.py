@@ -73,6 +73,10 @@ class DocumentWizardView(DialogView):
         self.headerbar.pack_end(self.next_button)
 
         self.page_stack = Gtk.Stack()
+        # Let each page use its own natural height instead of being stretched
+        # to the tallest page (which left a large blank area on short pages like
+        # the document-class chooser).
+        self.page_stack.set_vhomogeneous(False)
         self.center_box.set_center_widget(self.page_stack)
         self.topbox.append(self.center_box)
 

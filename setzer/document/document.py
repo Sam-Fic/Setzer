@@ -424,7 +424,13 @@ class Document(Observable):
     def scroll_cursor_onscreen(self, margin_lines=5):
         height = self.view.scrolled_window.get_allocated_height()
         if height > 0:
-            margin = margin_lines / (height / FontManager.get_line_height(self.source_view))
+            # margin_lines == 0 时 margin 恒为 0，跳过 get_line_height（每次按键
+            # 经 on_cursor_position_change 调用此路径，get_line_height 虽只测首行
+            # 但属可消除的无谓 C 调用）。margin_lines > 0 的低频调用保留原逻辑。
+            if margin_lines > 0:
+                margin = margin_lines / (height / FontManager.get_line_height(self.source_view))
+            else:
+                margin = 0
 
             self.view.scrolled_window.set_kinetic_scrolling(False)
             self.source_view.scroll_to_mark(self.source_buffer.get_insert(), margin, False, 0, 0)

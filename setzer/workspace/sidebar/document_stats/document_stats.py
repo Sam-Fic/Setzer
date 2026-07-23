@@ -69,9 +69,6 @@ class DocumentStats(object):
             self.update_data()
         self.update_view()
 
-    def on_modified_changed(self, buffer):
-        self.update_data()
-
     #@timer
     def update_data(self):
         if self.document == None: return True

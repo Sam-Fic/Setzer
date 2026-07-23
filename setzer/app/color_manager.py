@@ -18,12 +18,19 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gdk, Gtk
+gi.require_version('Adw', '1')
+from gi.repository import Gdk, Gtk, Adw
 
 
 class ColorManager():
 
     main_window = None
+    # 颜色缓存：name -> Gdk.RGBA（lookup_color 的原始结果）。
+    # get_ui_color 在每帧 draw 中被多次调用（gutter/preview），lookup_color 是
+    # C 级 CSS 级联查找。颜色仅在主题切换时变化，缓存命中时省去级联查找。
+    # 注意：缓存命中时返回副本——部分调用者会修改 .alpha（document.py、
+    # preview_presenter.py），不能让缓存对象被污染。
+    _color_cache = {}
 
     # 自定义颜色名 -> 内置 Libadwaita/GTK 调色板同名回退（语义相近）
     fallback_colors = {
@@ -52,35 +59,58 @@ class ColorManager():
 
     def init(main_window):
         ColorManager.main_window = main_window
+        ColorManager._color_cache = {}
+        # 主题切换（明↔暗）时清空缓存，下次 get_ui_color 重新查找
+        Adw.StyleManager.get_default().connect('notify::dark', ColorManager.on_theme_changed)
+
+    def on_theme_changed(style_manager, pspec):
+        ColorManager._color_cache = {}
 
     def get_ui_color(name):
+        cached = ColorManager._color_cache.get(name)
+        if cached is not None:
+            # 返回副本：部分调用者会修改 .alpha，不能让缓存对象被污染
+            rgba = Gdk.RGBA()
+            rgba.red, rgba.green, rgba.blue, rgba.alpha = cached.red, cached.green, cached.blue, cached.alpha
+            return rgba
+
         style_context = ColorManager.main_window.get_style_context()
         found, rgba = style_context.lookup_color(name)
-        if found:
-            return rgba
-        # 回退到 GTK/Libadwaita 内置调色板同名色
-        fallback = ColorManager.fallback_colors.get(name, name)
-        found, rgba = style_context.lookup_color(fallback)
-        if found:
-            return rgba
-        # 最后兜底：不透明黑色，避免崩溃
-        return Gdk.RGBA(0, 0, 0, 1)
+        if not found:
+            # 回退到 GTK/Libadwaita 内置调色板同名色
+            fallback = ColorManager.fallback_colors.get(name, name)
+            found, rgba = style_context.lookup_color(fallback)
+        if not found:
+            # 最后兜底：不透明黑色，避免崩溃
+            rgba = Gdk.RGBA(0, 0, 0, 1)
+
+        ColorManager._color_cache[name] = rgba
+        # 首次返回也用副本，保持一致语义
+        result = Gdk.RGBA()
+        result.red, result.green, result.blue, result.alpha = rgba.red, rgba.green, rgba.blue, rgba.alpha
+        return result
+
+    def _to_byte(value):
+        # Theme colors coming out of color computations (mix/shade/alpha) can
+        # be slightly out of the [0, 1] range. ``format(v, '02x')`` only sets a
+        # *minimum* width, so an out-of-range component would emit 3+ hex
+        # digits and produce a malformed color string (e.g. '#13c8e8b') that
+        # Pango refuses to parse. Clamp and round to a valid byte.
+        return max(0, min(255, int(round(value * 255))))
 
     def get_ui_color_string(name):
         color_rgba = ColorManager.get_ui_color(name)
-        color_string = '#'
-        color_string += format(int(color_rgba.red * 255), '02x')
-        color_string += format(int(color_rgba.green * 255), '02x')
-        color_string += format(int(color_rgba.blue * 255), '02x')
-        return color_string
+        return '#{:02x}{:02x}{:02x}'.format(
+            ColorManager._to_byte(color_rgba.red),
+            ColorManager._to_byte(color_rgba.green),
+            ColorManager._to_byte(color_rgba.blue))
 
     def get_ui_color_string_with_alpha(name):
         color_rgba = ColorManager.get_ui_color(name)
-        color_string = '#'
-        color_string += format(int(color_rgba.red * 255), '02x')
-        color_string += format(int(color_rgba.green * 255), '02x')
-        color_string += format(int(color_rgba.blue * 255), '02x')
-        color_string += format(int(color_rgba.alpha * 255), '02x')
-        return color_string
+        return '#{:02x}{:02x}{:02x}{:02x}'.format(
+            ColorManager._to_byte(color_rgba.red),
+            ColorManager._to_byte(color_rgba.green),
+            ColorManager._to_byte(color_rgba.blue),
+            ColorManager._to_byte(color_rgba.alpha))
 
 

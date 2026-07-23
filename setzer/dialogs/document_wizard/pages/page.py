@@ -72,16 +72,11 @@ class PageView(Gtk.Box):
         self.option_twocolumn.set_title(_('Two-column layout'))
 
         # Font size ---------------------------------------------------------
-        # Gtk.Scale has no libadwaita equivalent, so it is kept and presented
-        # as the suffix of an Adw.ActionRow for consistent row chrome.
-        self.font_size_row = Adw.ActionRow()
-        self.font_size_row.set_title(_('Font size'))
-        self.font_size_entry = Gtk.Scale.new_with_range(Gtk.Orientation.HORIZONTAL, 6, 18, 1)
-        self.font_size_entry.set_draw_value(True)
-        self.font_size_entry.set_hexpand(True)
-        self.font_size_entry.set_valign(Gtk.Align.CENTER)
-        self.font_size_entry.set_size_request(200, -1)
-        self.font_size_row.add_suffix(self.font_size_entry)
+        # A standard Adw.SpinRow, consistent with the margin rows below.
+        self.font_size_entry = Adw.SpinRow()
+        self.font_size_entry.set_title(_('Font size'))
+        self.font_size_entry.set_adjustment(Gtk.Adjustment(value=11, lower=6, upper=18, step_increment=1))
+        self.font_size_entry.set_digits(0)
 
         # Page margins ------------------------------------------------------
         self.option_default_margins = Adw.SwitchRow()

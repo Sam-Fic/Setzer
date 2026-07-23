@@ -35,7 +35,7 @@ THEME_MODES = [
     ('Dark', 'dark', Adw.ColorScheme.FORCE_DARK),
 ]
 
-# language: display name -> stored value (locale code); not yet wired to gettext
+# language: display name -> stored value (locale code); 通过 gettext 的 languages 参数在重启后生效
 LANGUAGES = [
     ('English', 'en'),
     ('Chinese (Simplified)', 'zh_CN'),
@@ -87,7 +87,7 @@ class PageAppearanceColors(object):
     def on_language_changed(self, combo, pspec=None):
         value = LANGUAGES[combo.get_selected()][1]
         self.settings.set_value('preferences', 'language', value)
-        # 多语言尚未实现，这里仅持久化用户选择。
+        # 语言选择已接入 gettext，重启应用后按此偏好加载界面语言。
 
     @staticmethod
     def apply_theme(value):

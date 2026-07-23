@@ -20,9 +20,10 @@ import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
 gi.require_version('Xdp', '1.0')
-from gi.repository import Gtk, Adw, Xdp
+from gi.repository import Gtk, Adw, Xdp, GLib
 
 import subprocess
+import _thread as thread
 
 
 class PageBuildSystem(object):
@@ -98,28 +99,40 @@ class PageBuildSystem(object):
         self.settings.set_value('preferences', 'build_option_system_commands', self.shell_values[selected])
 
     def setup_latex_interpreters(self):
-        self.latex_interpreters = list()
+        # 异步检测：5 个 subprocess（xelatex/pdflatex/lualatex/tectonic/latexmk
+        # --version）串行执行约 250–750ms。原实现同步阻塞主线程，打开 Preferences
+        # 时窗口冻结。改为后台线程检测，完成后 idle 回主线程更新 UI。
+        # 检测期间解释器选择器暂时不可见（保持初始空状态）。
+        thread.start_new_thread(self._detect_interpreters, ())
+
+    def _detect_interpreters(self):
+        '''后台线程：检测可用 LaTeX 解释器和 latexmk。'''
+        latex_interpreters = []
         for interpreter in ['xelatex', 'pdflatex', 'lualatex', 'tectonic']:
-            arguments = [interpreter, '--version']
             try:
-                process = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+                process = subprocess.Popen([interpreter, '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             except FileNotFoundError:
                 pass
             else:
                 process.wait()
                 if process.returncode == 0:
-                    self.latex_interpreters.append(interpreter)
+                    latex_interpreters.append(interpreter)
 
-        self.latexmk_available = False
-        arguments = ['latexmk', '--version']
+        latexmk_available = False
         try:
-            process = subprocess.Popen(arguments, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            process = subprocess.Popen(['latexmk', '--version'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         except FileNotFoundError:
             pass
         else:
             process.wait()
-            if process.returncode == 0:
-                self.latexmk_available = True
+            latexmk_available = (process.returncode == 0)
+
+        GLib.idle_add(self._apply_interpreter_results, latex_interpreters, latexmk_available)
+
+    def _apply_interpreter_results(self, latex_interpreters, latexmk_available):
+        '''主线程 idle 回调：用检测结果更新 UI。'''
+        self.latex_interpreters = latex_interpreters
+        self.latexmk_available = latexmk_available
 
         if len(self.latex_interpreters) == 0:
             self.view.no_interpreter_label.set_visible(True)
@@ -147,6 +160,7 @@ class PageBuildSystem(object):
             self.view.option_latex_interpreter.set_selected(self.latex_interpreters.index(current))
 
             self.update_tectonic_element_visibility()
+        return False
 
     def update_tectonic_element_visibility(self):
         selected = self.view.option_latex_interpreter.get_selected()

@@ -34,6 +34,13 @@ headerbar button.headerbar-plain.headerbar-icon:active:not(:checked) {
 }
 
 /* 符号面板的搜索条：左右留白，与上方工具栏、下方符号网格区分。 */
+/* 隐藏 GtkSourceView 内置行号 gutter，由自定义 Gutter 统一绘制。 */
+.sourceview gutter:first-child {
+    min-width: 0;
+    padding: 0;
+    background: transparent;
+}
+
 .sidebar-search-bar {
     padding: 6px 10px 8px;
 }
