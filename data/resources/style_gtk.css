@@ -5,10 +5,9 @@
  * 仅在原生组件无法达到目标行为时，追加作用域精确的最小 CSS。
  */
 
-/* 标题栏图标按钮：统一无按钮底板，仅保留选中状态。 */
-headerbar button.headerbar-icon:not(:checked),
-headerbar button.headerbar-icon:hover:not(:checked),
-headerbar button.headerbar-icon:active:not(:checked) {
+/* 标题栏图标按钮：常态扁平透明（去掉持久底板），
+   悬停 / 按下 / 选中保留 libadwaita 默认反馈底色。 */
+headerbar button.headerbar-icon:not(:hover):not(:active):not(:checked) {
     background-color: transparent;
     background-image: none;
 }

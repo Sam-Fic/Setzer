@@ -149,6 +149,7 @@ class HeaderBar(object):
         self.center_button.set_halign(Gtk.Align.CENTER)
         self.center_button.set_child(self.document_title)
         self.center_button.add_css_class('headerbar-plain')
+        self.center_button.add_css_class('headerbar-icon')
         self.center_button.connect('clicked', self._on_center_button_clicked)
 
         self.center_title_welcome = Adw.WindowTitle()
