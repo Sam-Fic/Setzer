@@ -31,3 +31,6 @@ coverage.xml
 .DS_Store
 Thumbs.db
 build
+
+# Gettext compiled translations
+*.mo
