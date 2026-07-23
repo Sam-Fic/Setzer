@@ -377,7 +377,7 @@ class Shortcutsbar(Gtk.Box):
 
     def insert_document_button(self):
         self.document_button = Gtk.MenuButton()
-        self.document_button.set_icon_name('application-x-addon-symbolic')
+        self.document_button.set_icon_name('text-x-generic-symbolic')
         self.document_button.set_tooltip_text(_('Document'))
         self._setup_menu_button(self.document_button, DocumentMenu())
         self._add_left_button(self.document_button)
@@ -398,7 +398,7 @@ class Shortcutsbar(Gtk.Box):
 
     def insert_text_button(self):
         self.text_button = Gtk.MenuButton()
-        self.text_button.set_icon_name('text-symbolic')
+        self.text_button.set_icon_name('format-text-rich-symbolic')
         self.text_button.set_tooltip_text(_('Text'))
         self._setup_menu_button(self.text_button, TextMenu())
         self._add_left_button(self.text_button)

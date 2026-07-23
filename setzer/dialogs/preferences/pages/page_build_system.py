@@ -258,6 +258,11 @@ flatpak install org.freedesktop.Sdk.Extension.texlive'''))
         label_explainer.set_markup(_('Warning: enable this only if you have to. It can cause security problems when building files from untrusted sources.'))
         label_explainer.set_xalign(0)
         label_explainer.add_css_class('caption')
+        # 与 Adw.PreferencesRow 内边距对齐，避免裸 Label 贴边
+        label_explainer.set_margin_start(12)
+        label_explainer.set_margin_end(12)
+        label_explainer.set_margin_top(10)
+        label_explainer.set_margin_bottom(4)
         group_shell_escape.add(label_explainer)
 
         self.option_system_commands = Adw.ComboRow()

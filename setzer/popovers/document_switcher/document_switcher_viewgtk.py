@@ -114,7 +114,7 @@ class DocumentSwitcherView(object):
         row.close_button = close_button
 
         if root_selection_mode and document.get_is_root():
-            root_icon = Gtk.Image(icon_name='emblem-ok-symbolic')
+            root_icon = Gtk.Image(icon_name='object-select-symbolic')
             row.add_suffix(root_icon)
 
         return row

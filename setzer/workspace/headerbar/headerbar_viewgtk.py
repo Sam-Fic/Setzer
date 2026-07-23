@@ -36,12 +36,12 @@ class HeaderBar(object):
 
         # sidebar toggles
         self.document_structure_toggle = Gtk.ToggleButton()
-        self.document_structure_toggle.set_child(Gtk.Image(icon_name='document-structure-symbolic'))
+        self.document_structure_toggle.set_child(Gtk.Image(icon_name='view-list-symbolic'))
         self.document_structure_toggle.set_can_focus(False)
         self.document_structure_toggle.set_tooltip_text(_('Toggle document structure') + ' (F2)')
 
         self.symbols_toggle = Gtk.ToggleButton()
-        self.symbols_toggle.set_child(Gtk.Image(icon_name='insert-text-symbolic'))
+        self.symbols_toggle.set_child(Gtk.Image(icon_name='emoji-symbols-symbolic'))
         self.symbols_toggle.set_can_focus(False)
         self.symbols_toggle.set_tooltip_text(_('Toggle symbols') + ' (F3)')
 

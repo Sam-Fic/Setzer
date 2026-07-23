@@ -57,7 +57,7 @@ class PreviewPanelView(Gtk.Box):
         self.recolor_pdf_toggle.add_css_class('flat')
         self.recolor_pdf_toggle.set_can_focus(False)
 
-        self.external_viewer_button = Gtk.Button(icon_name='external-viewer-symbolic')
+        self.external_viewer_button = Gtk.Button(icon_name='web-browser-symbolic')
         self.external_viewer_button.set_tooltip_text(_('External Viewer'))
         self.external_viewer_button.add_css_class('flat')
         self.external_viewer_button.set_can_focus(False)
