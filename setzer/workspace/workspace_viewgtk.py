@@ -158,37 +158,16 @@ class MainWindow(Adw.ApplicationWindow):
                 Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
         # shortcutsbar overflow reflow 安全网：Shortcutsbar.do_size_allocate
-        # 是主触发路径（宽度变化时立即 reflow）。这里每 1000ms 轮询一次作为
-        # 兜底，覆盖 do_size_allocate 可能漏掉的边缘情况（如某些 GTK4 版本
-        # vfunc 覆写不稳定）。主路径可靠时此轮询几乎不做实际工作，
-        # 1000ms 足够兜底且把空闲唤醒频率从 5Hz 降到 1Hz。
-        # 关键：必须测 shortcutsbar 自身宽度（= preview_paned 的 start_child
-        # 即 document_stack_wrapper 宽度，不含 sidebar 和 preview），而不是
-        # 窗口宽度。窗口 1536px 但 sidebar+preview 占大半时, shortcutsbar 可能
-        # 只有 500px——若传 1536 给 reflow，会误判有空间导致 target=0，
-        # 按钮被挤出去。
-        self._last_sb_width = -1
-        self._reflow_source = None
-        self._pending_width = None
+        # 是主触发路径（同步 reflow，零延迟）。这里每 250ms 轮询一次作为兜底，
+        # 覆盖 do_size_allocate 可能漏掉的边缘情况。主路径可靠时此轮询不做实际工作。
+        # 直接用 _last_allocated_width 判断，无需独立的 _last_sb_width 变量。
         def _poll_sb_width():
             width = self.shortcutsbar.get_allocated_width()
-            if width > 1 and width != self._last_sb_width:
-                self._pending_width = width
-                # 延迟 50ms 再 reflow，让 GTK 完成布局重算
-                if self._reflow_source is None:
-                    self._reflow_source = GLib.timeout_add(50, _do_reflow)
-            return True  # continue polling
-        def _do_reflow():
-            self._reflow_source = None
-            if self._pending_width is None:
-                return False
-            width = self._pending_width
-            self._pending_width = None
-            if width != self._last_sb_width:
-                self._last_sb_width = width
+            if width > 1 and width != self.shortcutsbar._last_allocated_width:
                 self.shortcutsbar.reflow_for_width(width)
-            return False
-        GLib.timeout_add(1000, _poll_sb_width)
+                self.shortcutsbar._last_allocated_width = width
+            return True
+        GLib.timeout_add(250, _poll_sb_width)
 
 
     def do_size_allocate(self, width, height, baseline):

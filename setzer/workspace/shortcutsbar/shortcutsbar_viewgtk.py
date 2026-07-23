@@ -153,30 +153,35 @@ class Shortcutsbar(Gtk.Box):
         # Overflow state: 0 = 全部 visible
         self._overflow_count = 0
         self._last_allocated_width = -1
-        self._in_reflow = False
-        # 按钮自然宽度缓存。避免在 reflow 热路径（每帧 size-allocate）中调用
-        # measure()——每次 measure() 触发 GTK4 CSS/图标尺寸计算，15 个按钮 ≈ 1-2ms，
-        # 连续拖拽时造成帧丢失（表现为"迟钝"）。缓存后 reflow 退化为纯算术（~0.01ms）。
-        # 在 realize 后重建（拾取 CSS 样式），在 request_reflow 时失效（按钮可见性/内容变化）。
+        # 按钮自然宽度缓存。避免在 reflow 热路径中调用 measure()。
         self._button_widths = None
         self.connect('realize', self._on_realize)
 
     def _on_realize(self, widget):
-        # realize 后 CSS 已应用，按钮宽度可能与 realize 前不同，失效缓存以重建。
+        # realize 后 CSS 已应用，按钮宽度可能与 realize 前不同。
+        # 在 realize 回调中（allocate 之外）重建缓存，measure() 返回准确值。
         self._button_widths = None
+        self._ensure_width_cache()
 
     # ------- continuous reflow: 父级 size 变化时自动计算 overflow -------
 
     def do_size_allocate(self, width, height, baseline):
+        # 同步 reflow：在 Gtk.Box.do_size_allocate 之前用 set_visible() 改按钮可见性。
+        # 之前用 idle 异步 reflow 有 ~0.x 秒延迟——因为 idle (PRIORITY_HIGH_IDLE=100)
+        # 优先级低于 motion 事件 (PRIORITY_DEFAULT=0)，连续拖拽时 idle 被事件饿死，
+        # 直到用户停拖才执行。
+        #
+        # 之前用 remove/append 同步 reflow 会破坏 GTK4 布局周期（structural change
+        # during allocate），导致后续 do_size_allocate 不再触发。
+        #
+        # 现在：set_visible() 不是 structural change（只设 flag），在 allocate 中安全。
+        # 在 Gtk.Box.do_size_allocate 之前调用，layout manager 会按新可见性在同一帧
+        # 分配空间——零延迟、零帧丢失。
+        target = self._compute_overflow_target(width)
+        if target != self._overflow_count:
+            self.set_overflow_count(target)
         Gtk.Box.do_size_allocate(self, width, height, baseline)
-        # 同步 reflow：缓存宽度后 reflow_for_width 是纯算术，可在 size-allocate
-        # 中安全调用，消除了 idle 调度带来的一帧延迟。_in_reflow 防止
-        # set_overflow_count 改 widget tree 后触发的重入 size-allocate 递归。
-        if width != self._last_allocated_width and not self._in_reflow:
-            self._in_reflow = True
-            self.reflow_for_width(width)
-            self._last_allocated_width = width
-            self._in_reflow = False
+        self._last_allocated_width = width
 
     def request_reflow(self):
         '''Re-run reflow with the current allocated width.
@@ -184,11 +189,10 @@ class Shortcutsbar(Gtk.Box):
         正常 reflow 只在 shortcutsbar 分配宽度变化时触发（do_size_allocate）。
         但按钮宽度可能因内容变化而改变，且不会引起 shortcutsbar 分配宽度变化
         （_NoNaturalWidthLayout 横向返回 0，paned 不会因此重分配）。这类情况包括：
-          - wizard 按钮的 revealer 展开/收起（显示/隐藏 "New Document Wizard" 标签）
           - update_buttons 切换 latex 专属按钮的可见性
         此时需主动触发一次 reflow，按新的按钮宽度重新计算 overflow 数量。
         失效宽度缓存（按钮可见性变了，缓存的宽度不再有效），用 idle 延迟确保
-        GTK 已处理 set_visible/set_reveal_child 后的新首选宽度。'''
+        GTK 已处理 set_visible 后的新首选宽度。'''
         self._button_widths = None
         width = self.get_allocated_width()
         if width > 1:
@@ -214,29 +218,28 @@ class Shortcutsbar(Gtk.Box):
         cache[id(self.overflow_button)] = self._measure_width(self.overflow_button)
         self._button_widths = cache
 
-    def reflow_for_width(self, available_width):
-        '''Compute how many left buttons fit in available_width and hide
-        the rest into the overflow popover. Called by do_size_allocate
-        (primary path) and the _poll_sb_width safety net.
+    def _is_base_visible(self, btn):
+        '''检查按钮的"基础可见性"——由 update_buttons 设置（latex 专属按钮在非
+        latex 文档时隐藏）。reflow 只在 base-visible 的按钮中决定哪些 overflow。'''
+        base = getattr(btn, '_base_visible', None)
+        if base is None:
+            return True  # 未设置 = 始终可见（如 wizard 按钮）
+        return base
 
-        算法：读取缓存的每个 left button 自然宽，累加得 left_total。读取 right 4 按钮
-        和 overflow 按钮的缓存自然宽。avail = available_width - right_total - margins
-        - (overflow 按钮宽 + spacing 若 overflow visible)。
-        若 left_total <= avail：target=0；否则按从右到左逐个收起，直到能塞下。
-        为避免 feedback loop（reflow 改 tree→新 layout→新 reflow），overflow 按钮的
-        宽度始终按"已显示"计算（即一旦 target>0 就一直预留 overflow 按钮空间）。'''
+    def _compute_overflow_target(self, available_width):
+        '''纯计算：返回应该 overflow 的左侧按钮数量。无副作用。'''
         if available_width <= 1:
-            return
+            return self._overflow_count
         self._ensure_width_cache()
         cache = self._button_widths
 
-        # 只统计可见按钮：不可见按钮（如非 latex 文档时的 latex 专属按钮）
-        # 不占布局空间，不计入宽度与数量，否则 left_total 虚高导致过度收起。
+        # 只统计 base-visible 的左侧按钮
         left_widths = []
         for btn in self.left_buttons:
-            if not btn.get_visible():
+            if not self._is_base_visible(btn):
                 continue
             left_widths.append(cache.get(id(btn), 36))
+        # 右侧按钮用 get_visible（right 按钮不会被 reflow 隐藏）
         right_widths = []
         for btn in [self.button_search, self.button_replace, self.button_more, self.button_build_log]:
             if not btn.get_visible():
@@ -250,9 +253,7 @@ class Shortcutsbar(Gtk.Box):
 
         left_total = sum(left_widths) + spacing * max(0, n_left - 1)
         right_total = sum(right_widths) + spacing * max(0, n_right - 1)
-        # 始终预留 overflow 按钮空间（即使当前 target=0），避免 feedback loop
-        # 当 target=0 时 overflow 按钮隐藏，下次 reflow 不会因它消失而扩张
-        fixed = right_total + 2 * self._margin_horizontal + overflow_nat + spacing  # margins + overflow
+        fixed = right_total + 2 * self._margin_horizontal + overflow_nat + spacing
 
         avail = available_width - fixed
 
@@ -269,32 +270,45 @@ class Shortcutsbar(Gtk.Box):
                     break
             target = min(target, n_left)
 
-        target = max(0, target)
+        return max(0, target)
+
+    def reflow_for_width(self, available_width):
+        '''Compute target and apply. Called by request_reflow (via idle) and
+        the safety net poll.'''
+        target = self._compute_overflow_target(available_width)
         if target != self._overflow_count:
             self.set_overflow_count(target)
 
-    # ------- overflow API (called by MainWindow's Adw.Breakpoints) -------
+    # ------- overflow API -------
 
     def set_overflow_count(self, n):
-        '''Move the rightmost n left buttons into the overflow popover.
-        0 = show all inline. Idempotent.'''
+        '''Hide the rightmost n base-visible left buttons via set_visible().
+        0 = show all inline. Idempotent.
+
+        用 set_visible() 而非 remove/append：
+        - set_visible() 是 flag 设置，在 do_size_allocate 中安全（不改变 widget tree 结构）
+        - remove/append 是 structural change，在 allocate 中会破坏 GTK4 布局周期
+        - 配合在 Gtk.Box.do_size_allocate 之前调用，layout manager 按新可见性同帧分配
+
+        用 _base_visible 属性区分两种隐藏来源：
+        - update_buttons 设 base-visible=False（非 latex 文档隐藏 latex 专属按钮）
+        - reflow 设 reflow_visible=False（宽度不够 overflow 到菜单）
+        实际可见 = base_visible and reflow_visible'''
         n = max(0, min(n, len(self.left_buttons)))
         if n == self._overflow_count:
             return
-        # 先把当前在 overflow 的所有 button 还原到 left_box
-        for btn in self.left_buttons:
-            if btn.get_parent() is not self.left_box:
-                self.left_box.append(btn)
-        # 把最后 n 个从 left_box 移除。
-        # 注意：必须 guard n>0——Python 中 list[-0:] == list[0:]（整个列表），
-        # 若不 guard，n=0 时会把刚还原的全部按钮又移除，导致最宽档位左侧按钮全消失。
-        if n > 0:
-            for btn in self.left_buttons[-n:]:
-                self.left_box.remove(btn)
-        # 重建 overflow menu model
-        self._refresh_overflow_list(n)
+        # 计算前 n 个 base-visible 按钮中应 overflow 的（从右到左）
+        base_visible_indices = [i for i, btn in enumerate(self.left_buttons) if self._is_base_visible(btn)]
+        overflow_count = min(n, len(base_visible_indices))
+        overflow_indices = set(base_visible_indices[-overflow_count:]) if overflow_count > 0 else set()
+
+        for i, btn in enumerate(self.left_buttons):
+            base = self._is_base_visible(btn)
+            reflow_visible = i not in overflow_indices
+            btn.set_visible(base and reflow_visible)
+
+        self._refresh_overflow_list(overflow_count)
         self._overflow_count = n
-        # 0 时隐藏 overflow button，否则显示
         self.overflow_button.set_visible(n > 0)
 
     def _refresh_overflow_list(self, n):

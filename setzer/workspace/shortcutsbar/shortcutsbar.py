@@ -74,7 +74,9 @@ class Shortcutsbar(object):
         # 与其他 latex 按钮一致：latex 文档时常驻显示，纯图标。
         # is_latex_document() 在文档生命周期内不变，因此只在文档切换时
         # 调用即可（on_new_active_document / __init__），无需每次按键触发。
-        self.view.wizard_button.set_visible(self.document.is_latex_document())
+        visible = self.document.is_latex_document()
+        self.view.wizard_button._base_visible = visible
+        self.view.wizard_button.set_visible(visible)
 
 
     def update_buttons(self, workspace=None, parameter=None):
@@ -84,15 +86,16 @@ class Shortcutsbar(object):
         self.view.button_replace.set_active(self.document.search.search_bar_mode == 'replace')
 
         is_latex = self.document.is_latex_document()
-        self.view.beamer_button.set_visible(is_latex)
-        self.view.bibliography_button.set_visible(is_latex)
-        self.view.text_button.set_visible(is_latex)
-        self.view.quotes_button.set_visible(is_latex)
-        self.view.math_button.set_visible(is_latex)
-        self.view.insert_object_button.set_visible(is_latex)
-        self.view.italic_button.set_visible(is_latex)
-        self.view.bold_button.set_visible(is_latex)
-        self.view.document_button.set_visible(is_latex)
+        # _base_visible 让 reflow 区分"update_buttons 隐藏"和
+        # "reflow overflow 隐藏"——reflow 只 overflow base-visible 的按钮，
+        # 不会意外显示被 update_buttons 隐藏的非 latex 按钮。
+        for btn in [self.view.beamer_button, self.view.bibliography_button,
+                    self.view.text_button, self.view.quotes_button,
+                    self.view.math_button, self.view.insert_object_button,
+                    self.view.italic_button, self.view.bold_button,
+                    self.view.document_button]:
+            btn._base_visible = is_latex
+            btn.set_visible(is_latex)
 
         root_or_active_latex = self.workspace.get_root_or_active_latex_document()
         self.view.button_build_log.set_active(self.workspace.get_show_build_log())
