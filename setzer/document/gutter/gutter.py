@@ -233,8 +233,8 @@ class Gutter(object):
             self.total_width = total_width
             self.line_numbers_width = line_numbers_width
             self.layout.set_width((line_numbers_width - self.char_width) * Pango.SCALE)
-            self.drawing_area.set_size_request(total_width + self.char_width, -1)
-            self.document_view.margin.set_size_request(total_width + self.char_width, -1)
+            self.drawing_area.set_size_request(total_width, -1)
+            self.document_view.margin.set_size_request(total_width, -1)
 
     #@timer
     def draw(self, drawing_area, ctx, width, height, data=None):
@@ -266,13 +266,6 @@ class Gutter(object):
     def draw_background_and_border(self, ctx, width, height):
         Gdk.cairo_set_source_rgba(ctx, ColorManager.get_ui_color('view_bg_color'))
         ctx.rectangle(0, 0, self.total_width, height)
-        ctx.fill()
-
-        # gutter 右缘分隔线：弱化描边（仅极低 alpha 提示），减少线条感。
-        border_color = ColorManager.get_ui_color('borders')
-        border_color.alpha *= 0.4
-        Gdk.cairo_set_source_rgba(ctx, border_color)
-        ctx.rectangle(self.total_width, 0, 1, height)
         ctx.fill()
 
     def draw_line(self, ctx, line, is_current, offset, line_height):

@@ -74,6 +74,9 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.preview_paned_overlay = Gtk.Overlay()
         self.preview_help_stack = Gtk.Stack()
+        # 浮层 headerbar 覆盖右侧预览/帮助区域顶部，必须留出 46px 上边距，
+        # 否则预览工具栏和帮助面板的 ActionBar 会被标题栏遮住。
+        self.preview_help_stack.set_margin_top(46)
         self.preview_help_stack.add_named(self.preview_panel, 'preview')
         self.preview_help_stack.add_named(self.help_panel, 'help')
 
@@ -113,10 +116,24 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.headerbar = headerbar_view.HeaderBar()
 
-        self.toolbar_view = Adw.ToolbarView()
-        self.toolbar_view.add_top_bar(self.headerbar.widget)
-        self.toolbar_view.set_content(self.mode_stack)
-        self.popoverlay.set_child(self.toolbar_view)
+        # 浮层 headerbar 会覆盖右侧内容区顶部，给内容区整体留出 headerbar
+        # 高度的上边距，避免编辑器/预览内容被标题栏遮住。
+        # 初始使用 46px 作为兜底，随后由 do_size_allocate 根据 headerbar
+        # 实际分配高度动态调整，避免写死高度。
+        self.document_stack_wrapper.set_margin_top(46)
+        self.preview_help_stack.set_margin_top(46)
+
+        # 不用 Adw.ToolbarView：headerbar 作为 overlay 叠在内容上方，
+        # 这样侧边栏可以从窗口顶部开始，覆盖标题栏区域。
+        # 关键：把 headerbar 作为右侧内容区 (preview_paned_overlay) 的 overlay，
+        # 而不是整个窗口的 overlay。这样 headerbar 只覆盖编辑器/预览区，
+        # 左侧 sidebar 完全不受其影响，内容也能正常显示。
+        self.headerbar.widget.set_valign(Gtk.Align.START)
+        self.preview_paned_overlay.add_overlay(self.headerbar.widget)
+
+        self.content_overlay = Gtk.Overlay()
+        self.content_overlay.set_child(self.mode_stack)
+        self.popoverlay.set_child(self.content_overlay)
 
         # 窄窗口自动把侧边栏折叠为浮层抽屉（Adw.OverlaySplitView 的 collapsed 属性）
         sidebar_breakpoint = Adw.Breakpoint.new(
@@ -125,7 +142,6 @@ class MainWindow(Adw.ApplicationWindow):
         self.add_breakpoint(sidebar_breakpoint)
         # 注意：shortcutsbar overflow 现在由 Shortcutsbar.do_size_allocate
         # 连续测量后动态计算（每像素自适应），不再用 Adw.Breakpoint 阶梯。
-
 
         self.css_provider_font_size = Gtk.CssProvider()
         Gtk.StyleContext.add_provider_for_display(self.get_display(), self.css_provider_font_size, Gtk.STYLE_PROVIDER_PRIORITY_USER)
@@ -173,5 +189,19 @@ class MainWindow(Adw.ApplicationWindow):
                 self.shortcutsbar.reflow_for_width(width)
             return False
         GLib.timeout_add(1000, _poll_sb_width)
+
+
+    def do_size_allocate(self, width, height, baseline):
+        Adw.ApplicationWindow.do_size_allocate(self, width, height, baseline)
+
+        # 根据浮层 headerbar 的实际高度动态调整编辑器/预览区的上边距，
+        # 保证内容不会被标题栏遮住，同时避免硬编码固定高度。
+        if hasattr(self, 'headerbar') and hasattr(self, 'document_stack_wrapper') and hasattr(self, 'preview_help_stack'):
+            headerbar_height = self.headerbar.widget.get_allocated_height()
+            if headerbar_height > 0:
+                if self.document_stack_wrapper.get_margin_top() != headerbar_height:
+                    self.document_stack_wrapper.set_margin_top(headerbar_height)
+                if self.preview_help_stack.get_margin_top() != headerbar_height:
+                    self.preview_help_stack.set_margin_top(headerbar_height)
 
 

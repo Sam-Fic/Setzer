@@ -89,13 +89,24 @@ textview gutter {
 .sidebar-section-group > .header {
     margin-bottom: 2px;
 }
+.sidebar-section-group {
+    padding-top: 0;
+}
+.sidebar-section-group > box {
+    padding-top: 0;
+}
 
 /*
  * 空状态占位：现代、低调，避免空分区显得空洞。
  */
 .sidebar-empty-state {
-    padding: 16px 8px;
+    padding: 4px 8px 12px;
     opacity: 0.85;
+    margin-top: 0;
+    min-height: 0;
+}
+.sidebar-empty-state image {
+    -gtk-icon-size: 48px;
 }
 .sidebar-empty-state .title {
     font-size: 0.95em;
@@ -116,7 +127,7 @@ textview gutter {
 /*
  * 预览区去描边：GTK/Libadwaita 的 Gtk.ScrolledWindow / Gtk.Viewport 默认
  * 会给可滚动内容区绘制一圈边缘描边（border / box-shadow），在明暗主题下
- * 表现为 PDF 预览外侧“一圈框”。这里统一去除预览区各级容器的边框与阴影，
+ * 表现为 PDF 预览外侧"一圈框"。这里统一去除预览区各级容器的边框与阴影，
  * 让 PDF 画布直接铺满，不再有包裹式描边。
  */
 .preview scrolledwindow,
@@ -145,20 +156,31 @@ paned > separator {
     border: none;
     box-shadow: none;
 }
-
-/*
- * 预览面板顶部横线：标题栏（ToolbarView 的 .top-bar）与内容区之间的分隔线。
- * Libadwaita 中该线来自 .top-bar 容器的 box-shadow（横贯窗口顶部、明暗都有，
- * 正好在预览/编辑器正上方）。注意：
- *   1. ToolbarView 的顶栏容器类名是 .top-bar（非 .toolbar）；
- *   2. GTK4 的 CSS 解析器不支持 !important，必须用普通声明 + 足够特异性。
- */
-toolbarview > .top-bar,
-.top-bar,
-headerbar {
-    box-shadow: none;
-}
-.preview stack {
+/* Gtk.ActionBar 内部结构为 actionbar > revealer > box，
+   顶部那条 inset 阴影画在内部 box 上，需单独清除。 */
+actionbar > revealer > box {
     border: none;
     box-shadow: none;
+    outline: none;
+}
+
+/*
+ * 标题栏与内容区之间的分隔线（横贯窗口顶部、明暗都有）。
+ * 经多轮排查,该线不在 toolbarview 内部(核弹规则已覆盖 toolbarview 全部子层
+ * 仍无效),而是来自窗口装饰层（CSD）：window 本身或 window > headerbar 的底
+ * 部描边/轮廓。同时补齐 outline（之前只清了 box-shadow/border,漏掉了用
+ * outline 绘制的分隔线）。覆盖 window 及以下各层。
+ */
+window,
+window > headerbar,
+window > headerbar.titlebar,
+headerbar,
+toolbarview,
+toolbarview > *,
+toolbarview > * > *,
+toolbarview > * > * > * {
+    box-shadow: none;
+    border: none;
+    outline: none;
+    background-image: none;
 }

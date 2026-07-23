@@ -22,6 +22,8 @@ from gi.repository import Gtk, GObject, Adw, Pango
 
 import time
 
+from setzer.widgets.search_entry.search_entry import SearchEntry
+
 
 class DocumentStructurePage(Gtk.Box):
 
@@ -29,6 +31,7 @@ class DocumentStructurePage(Gtk.Box):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.sections = dict()
+        self.section_widgets = dict()
         self.section_titles = list()
         self.scroll_to = None
         self._current_section_title = ''  # 缓存 section title，用于变化检测
@@ -48,6 +51,9 @@ class DocumentStructurePage(Gtk.Box):
         self.scrolled_window.get_vadjustment().connect('value-changed', self.on_scroll_or_resize)
         self.next_button.connect('clicked', self.on_next_button_clicked)
         self.prev_button.connect('clicked', self.on_prev_button_clicked)
+        self.search_button.connect('toggled', self.on_search_button_toggled)
+        self.search_entry.connect('stop-search', self.on_search_stopped)
+        self.search_entry.connect('changed', self.on_search_changed)
 
     def add_section(self, name, title, widget):
         group = Adw.PreferencesGroup()
@@ -56,8 +62,9 @@ class DocumentStructurePage(Gtk.Box):
         group.add(widget)
         self.page.add(group)
         self.sections[name] = group
+        self.section_widgets[name] = widget
         self.section_titles.append(title)
-        self._groups_cache = None    # 结构变化，失效缓存
+        self._groups_cache = None
         return group
 
     def set_section_visible(self, name, visible):
@@ -97,7 +104,27 @@ class DocumentStructurePage(Gtk.Box):
         self.nav_box.append(self.next_button)
 
         self.toolbar.append(self.nav_box)
+
+        self.search_button = Gtk.ToggleButton()
+        self.search_button.set_icon_name('edit-find-symbolic')
+        self.search_button.set_can_focus(False)
+        self.search_button.add_css_class('flat')
+        self.search_button.set_tooltip_text(_('Find'))
+        self.search_button.set_margin_start(6)
+        self.toolbar.append(self.search_button)
+
+        self.search_revealer = Gtk.Revealer()
+        self.search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.search_box.add_css_class('sidebar-search-bar')
+
+        self.search_entry = SearchEntry()
+        self.search_entry.set_hexpand(True)
+        self.search_box.append(self.search_entry)
+
+        self.search_revealer.set_child(self.search_box)
+
         self.append(self.toolbar)
+        self.append(self.search_revealer)
 
     def on_scroll_or_resize(self, *args):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
@@ -106,7 +133,8 @@ class DocumentStructurePage(Gtk.Box):
         # 一次取 visible sections，复用给按钮敏感度 + section label
         visible_sections = self.get_visible_sections()
 
-        at_bottom = scrolling_offset >= self.page.get_allocated_height() - self.scrolled_window.get_allocated_height()
+        vadj = self.scrolled_window.get_vadjustment()
+        at_bottom = scrolling_offset + vadj.get_page_size() >= vadj.get_upper() - 1
         has_next = len(visible_sections) > 0 and scrolling_offset < visible_sections[-1][1]
         self.next_button.set_sensitive(not at_bottom and has_next)
 
@@ -209,3 +237,29 @@ class DocumentStructurePage(Gtk.Box):
         return False
 
     def ease(self, time): return (time - 1)**3 + 1
+
+    def on_search_button_toggled(self, button):
+        if button.get_active():
+            self.search_entry.set_text('')
+            self.search_revealer.set_reveal_child(True)
+            self.search_entry.grab_focus()
+        else:
+            self.search_entry.set_text('')
+            self.search_revealer.set_reveal_child(False)
+            self.filter_sections('')
+
+    def on_search_stopped(self, entry):
+        self.search_button.set_active(False)
+
+    def on_search_changed(self, entry):
+        self.filter_sections(entry.get_text())
+
+    def filter_sections(self, query):
+        for name, group in self.sections.items():
+            widget = self.section_widgets.get(name)
+            if widget and hasattr(widget, 'filter_rows'):
+                any_visible = widget.filter_rows(query)
+                group.set_visible(any_visible or not query)
+            else:
+                group.set_visible(True)
+        self._groups_cache = None

@@ -155,9 +155,9 @@ class LaTeXDB():
         latex_parser_regex = ServiceLocator.get_regex_object(r'\\(label|include|input|bibliography|addbibresource)\{((?:\s|\w|\:|\.|,)*)\}|\\(usepackage)(?:\[.*\]){0,1}\{((?:\s|\w|\:|,)*)\}|\\(bibitem)(?:\[.*\]){0,1}\{((?:\s|\w|\:)*)\}')
         for match in latex_parser_regex.finditer(text):
             if match.group(1) == 'label':
-                labels = labels | {match.group(2).strip()}
+                labels.add(match.group(2).strip())
             elif match.group(5) == 'bibitem':
-                bibitems = bibitems | {match.group(6).strip()}
+                bibitems.add(match.group(6).strip())
 
         LaTeXDB.files[pathname]['bibitems'] = bibitems
         LaTeXDB.files[pathname]['labels'] = labels
@@ -167,7 +167,7 @@ class LaTeXDB():
             db = bibtexparser.load(f)
         bibitems = set()
         for match in db.entries:
-            bibitems = bibitems | {match['ID']}
+            bibitems.add(match['ID'])
 
         LaTeXDB.files[pathname]['bibitems'] = bibitems
 

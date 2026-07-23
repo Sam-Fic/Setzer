@@ -264,7 +264,7 @@ class ParserLaTeX(Observable):
             offset = match[1]
             match = match[0]
             if match.group(1) == 'label':
-                labels = labels | {match.group(2).strip()}
+                labels.add(match.group(2).strip())
                 labels_with_offset.append([match.group(2).strip(), offset])
             elif match.group(1) == 'include' or match.group(1) == 'input' or match.group(1) == 'subfile' or match.group(1) == 'subimport':
                 filename = match.group(2).strip()
@@ -274,21 +274,21 @@ class ParserLaTeX(Observable):
             elif match.group(1) == 'bibliography':
                 bibfiles = match.group(2).strip().split(',')
                 for entry in bibfiles:
-                    bibliographies = bibliographies | {entry.strip() + '.bib'}
+                    bibliographies.add(entry.strip() + '.bib')
             elif match.group(1) == 'addbibresource':
                 bibfiles = match.group(2).strip().split(',')
                 for entry in bibfiles:
-                    bibliographies = bibliographies | {entry.strip()}
+                    bibliographies.add(entry.strip())
             elif match.group(1) == 'todo':
-                todos = todos | {match.group(2).strip()}
+                todos.add(match.group(2).strip())
                 todos_with_offset.append([match.group(2).strip(), offset])
             elif match.group(3) == 'usepackage':
-                packages = packages | {match.group(4).strip()}
+                packages.add(match.group(4).strip())
                 if match.group(4).strip() not in packages_detailed:
                     packages_detailed[match.group(4).strip()] = []
                 packages_detailed[match.group(4).strip()].append([offset, match])
             elif match.group(5) == 'bibitem':
-                bibitems = bibitems | {match.group(6).strip()}
+                bibitems.add(match.group(6).strip())
 
         self.symbols['labels'] = labels
         self.symbols['labels_with_offset'] = labels_with_offset

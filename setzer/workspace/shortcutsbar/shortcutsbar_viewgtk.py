@@ -152,23 +152,31 @@ class Shortcutsbar(Gtk.Box):
 
         # Overflow state: 0 = 全部 visible
         self._overflow_count = 0
-        self._reflow_pending = False
         self._last_allocated_width = -1
+        self._in_reflow = False
+        # 按钮自然宽度缓存。避免在 reflow 热路径（每帧 size-allocate）中调用
+        # measure()——每次 measure() 触发 GTK4 CSS/图标尺寸计算，15 个按钮 ≈ 1-2ms，
+        # 连续拖拽时造成帧丢失（表现为"迟钝"）。缓存后 reflow 退化为纯算术（~0.01ms）。
+        # 在 realize 后重建（拾取 CSS 样式），在 request_reflow 时失效（按钮可见性/内容变化）。
+        self._button_widths = None
+        self.connect('realize', self._on_realize)
+
+    def _on_realize(self, widget):
+        # realize 后 CSS 已应用，按钮宽度可能与 realize 前不同，失效缓存以重建。
+        self._button_widths = None
 
     # ------- continuous reflow: 父级 size 变化时自动计算 overflow -------
 
     def do_size_allocate(self, width, height, baseline):
         Gtk.Box.do_size_allocate(self, width, height, baseline)
-        # 异步 reflow 避免在 size-allocate 流程中改 widget tree
-        if width != self._last_allocated_width and not self._reflow_pending:
-            self._reflow_pending = True
-            GLib.idle_add(self._reflow_idle, width)
-
-    def _reflow_idle(self, available_width):
-        self._reflow_pending = False
-        self.reflow_for_width(available_width)
-        self._last_allocated_width = available_width
-        return False  # remove idle
+        # 同步 reflow：缓存宽度后 reflow_for_width 是纯算术，可在 size-allocate
+        # 中安全调用，消除了 idle 调度带来的一帧延迟。_in_reflow 防止
+        # set_overflow_count 改 widget tree 后触发的重入 size-allocate 递归。
+        if width != self._last_allocated_width and not self._in_reflow:
+            self._in_reflow = True
+            self.reflow_for_width(width)
+            self._last_allocated_width = width
+            self._in_reflow = False
 
     def request_reflow(self):
         '''Re-run reflow with the current allocated width.
@@ -179,48 +187,62 @@ class Shortcutsbar(Gtk.Box):
           - wizard 按钮的 revealer 展开/收起（显示/隐藏 "New Document Wizard" 标签）
           - update_buttons 切换 latex 专属按钮的可见性
         此时需主动触发一次 reflow，按新的按钮宽度重新计算 overflow 数量。
-        用 idle 延迟，确保 GTK 已处理 set_visible/set_reveal_child 后的新首选宽度。'''
+        失效宽度缓存（按钮可见性变了，缓存的宽度不再有效），用 idle 延迟确保
+        GTK 已处理 set_visible/set_reveal_child 后的新首选宽度。'''
+        self._button_widths = None
         width = self.get_allocated_width()
         if width > 1:
             GLib.idle_add(self.reflow_for_width, width)
+
+    def _measure_width(self, widget):
+        try:
+            _min, nat, _b1, _b2 = widget.measure(Gtk.Orientation.HORIZONTAL, -1)
+        except Exception:
+            nat = 36
+        return max(0, nat)
+
+    def _ensure_width_cache(self):
+        '''一次性测量所有按钮自然宽度并缓存。仅在缓存为空时执行，
+        后续 reflow 直接读缓存，不再调用 measure()。'''
+        if self._button_widths is not None:
+            return
+        cache = {}
+        for btn in self.left_buttons:
+            cache[id(btn)] = self._measure_width(btn)
+        for btn in [self.button_search, self.button_replace, self.button_more, self.button_build_log]:
+            cache[id(btn)] = self._measure_width(btn)
+        cache[id(self.overflow_button)] = self._measure_width(self.overflow_button)
+        self._button_widths = cache
 
     def reflow_for_width(self, available_width):
         '''Compute how many left buttons fit in available_width and hide
         the rest into the overflow popover. Called by do_size_allocate
         (primary path) and the _poll_sb_width safety net.
 
-        算法：测量每个 left button 的自然宽，累加得 left_total。测量 right 4 按钮
-        和 overflow 按钮的自然宽。avail = available_width - right_total - margins
+        算法：读取缓存的每个 left button 自然宽，累加得 left_total。读取 right 4 按钮
+        和 overflow 按钮的缓存自然宽。avail = available_width - right_total - margins
         - (overflow 按钮宽 + spacing 若 overflow visible)。
         若 left_total <= avail：target=0；否则按从右到左逐个收起，直到能塞下。
         为避免 feedback loop（reflow 改 tree→新 layout→新 reflow），overflow 按钮的
         宽度始终按"已显示"计算（即一旦 target>0 就一直预留 overflow 按钮空间）。'''
         if available_width <= 1:
             return
-        # 只测量可见按钮：不可见按钮（如非 latex 文档时的 latex 专属按钮）
-        # 不占布局空间，不计入宽度与数量，否则 left_total 虚高导致过度收起。
-        #
-        # 注意：必须用 measure()，不能用 get_preferred_width()——后者在较新
-        # GTK4 已移除（AttributeError），若用 try/except 回退到 36 会让所有按钮
-        # 都被测成 36px，对展开后约 160px 的 wizard 按钮失明，导致该收起时不收起。
-        def _natural_width(widget):
-            try:
-                _min, nat, _b1, _b2 = widget.measure(Gtk.Orientation.HORIZONTAL, -1)
-            except Exception:
-                nat = 36
-            return max(0, nat)
+        self._ensure_width_cache()
+        cache = self._button_widths
 
+        # 只统计可见按钮：不可见按钮（如非 latex 文档时的 latex 专属按钮）
+        # 不占布局空间，不计入宽度与数量，否则 left_total 虚高导致过度收起。
         left_widths = []
         for btn in self.left_buttons:
             if not btn.get_visible():
                 continue
-            left_widths.append(_natural_width(btn))
+            left_widths.append(cache.get(id(btn), 36))
         right_widths = []
         for btn in [self.button_search, self.button_replace, self.button_more, self.button_build_log]:
             if not btn.get_visible():
                 continue
-            right_widths.append(_natural_width(btn))
-        overflow_nat = _natural_width(self.overflow_button)
+            right_widths.append(cache.get(id(btn), 36))
+        overflow_nat = cache.get(id(self.overflow_button), 36)
 
         spacing = 6
         n_left = len(left_widths)

@@ -17,7 +17,7 @@
 
 import gi
 gi.require_versions({'Gtk': '4.0', 'WebKit': '6.0', 'Adw': '1'})
-from gi.repository import WebKit, Gtk, Adw
+from gi.repository import WebKit, Gtk, Adw, Pango
 
 from setzer.widgets.search_entry.search_entry import SearchEntry
 
@@ -78,6 +78,7 @@ class HelpPanelView(Gtk.Box):
         self.search_content_box.set_margin_bottom(12)
 
         self.search_entry = SearchEntry()
+        self.search_entry.set_placeholder_text(_('Search help'))
         self.search_content_box.append(self.search_entry)
 
         self.search_results = Gtk.ListBox()
@@ -86,6 +87,8 @@ class HelpPanelView(Gtk.Box):
         self.search_results.set_margin_top(12)
         self.search_scroll = Gtk.ScrolledWindow()
         self.search_scroll.set_vexpand(True)
+        self.search_scroll.kinetic_scrolling = True
+        self.search_scroll.overlay_scrolling = True
         self.search_scroll.set_child(self.search_results)
         self.search_content_box.append(self.search_scroll)
 
@@ -98,12 +101,26 @@ class HelpPanelView(Gtk.Box):
         self.no_results_slate.set_valign(Gtk.Align.CENTER)
         self.search_content_box.append(self.no_results_slate)
 
+        self.initial_slate = Adw.StatusPage()
+        self.initial_slate.add_css_class('compact')
+        self.initial_slate.set_icon_name('system-search-symbolic')
+        self.initial_slate.set_title(_('Search Help'))
+        self.initial_slate.set_description(_('Type a keyword to search the documentation.'))
+        self.initial_slate.set_visible(True)
+        self.initial_slate.set_vexpand(True)
+        self.initial_slate.set_valign(Gtk.Align.CENTER)
+        self.search_content_box.append(self.initial_slate)
+
         self.search_clamp = Adw.Clamp()
         self.search_clamp.set_maximum_size(600)
         self.search_clamp.set_tightening_threshold(400)
+        self.search_clamp.set_margin_start(12)
+        self.search_clamp.set_margin_end(12)
         self.search_clamp.set_child(self.search_content_box)
 
         self.content = WebKit.WebView()
+        self.content.set_hexpand(True)
+        self.content.set_vexpand(True)
         self.user_content_manager = self.content.get_user_content_manager()
 
         self.settings = self.content.get_settings()
@@ -111,6 +128,8 @@ class HelpPanelView(Gtk.Box):
         self.settings.set_enable_javascript_markup(False)
         self.settings.set_enable_developer_extras(False)
         self.settings.set_enable_page_cache(False)
+        # Make help pages scroll smoothly with touchpads/mice.
+        self.settings.set_enable_smooth_scrolling(True)
 
         self.stack = Gtk.Stack()
         self.stack.set_vexpand(True)
@@ -127,16 +146,26 @@ class SearchResultView(Gtk.ListBoxRow):
     def __init__(self, data):
         Gtk.ListBoxRow.__init__(self)
         self.set_can_focus(False)
+        self.set_margin_top(6)
+        self.set_margin_bottom(6)
+        self.set_margin_start(15)
+        self.set_margin_end(15)
         self.uri_ending = data[0]
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.box.set_margin_start(3)
-        self.box.set_margin_end(3)
+        self.box.set_spacing(2)
         self.text_label = Gtk.Label()
         self.text_label.set_markup(data[1])
         self.text_label.set_xalign(0)
+        self.text_label.set_wrap(True)
+        self.text_label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        self.text_label.set_selectable(False)
         self.location_label = Gtk.Label()
-        self.location_label.set_markup('' + data[2] + '')
+        self.location_label.set_markup(data[2])
         self.location_label.set_xalign(0)
+        self.location_label.set_wrap(True)
+        self.location_label.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
+        self.location_label.add_css_class('dim-label')
+        self.location_label.set_selectable(False)
         self.box.append(self.text_label)
         self.box.append(self.location_label)
         self.set_child(self.box)

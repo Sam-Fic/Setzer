@@ -38,6 +38,7 @@ class HelpPanelPresenter(object):
             self.view.search_entry.remove_css_class('error')
             self.view.search_scroll.set_visible(True)
             self.view.no_results_slate.set_visible(False)
+            self.view.initial_slate.set_visible(False)
             for item in reversed(results_list):
                 list_item = help_panel_view.SearchResultView(item)
                 self.view.search_results.prepend(list_item)
@@ -46,10 +47,12 @@ class HelpPanelPresenter(object):
             self.view.search_entry.add_css_class('error')
             self.view.search_scroll.set_visible(False)
             self.view.no_results_slate.set_visible(True)
+            self.view.initial_slate.set_visible(False)
         else:
             self.view.search_entry.remove_css_class('error')
-            self.view.search_scroll.set_visible(True)
+            self.view.search_scroll.set_visible(False)
             self.view.no_results_slate.set_visible(False)
+            self.view.initial_slate.set_visible(True)
 
     def on_uri_changed(self, help_panel, uri):
         if self.view.content.get_uri() != uri:

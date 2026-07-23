@@ -40,6 +40,11 @@ class Headerbar(object):
         self.workspace.connect('update_recently_opened_documents', self.on_update_recently_opened_documents)
         self.workspace.connect('root_state_change', self.on_root_state_change)
 
+        # Initialize the correct Open button visibility now. The signal may
+        # have been emitted before this controller was constructed, leaving
+        # both buttons visible by default.
+        self.on_update_recently_opened_documents(None, self.workspace.recently_opened_documents)
+
         self.activate_welcome_screen_mode()
 
     def on_document_removed(self, workspace, document):

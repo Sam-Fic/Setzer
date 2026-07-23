@@ -49,6 +49,7 @@ class StructureWidget(Gtk.Box):
 
         self.empty_state = Adw.StatusPage()
         self.empty_state.set_visible(False)
+        self.empty_state.set_vexpand(True)
         self.empty_state.add_css_class('compact')
         self.empty_state.add_css_class('sidebar-empty-state')
         Gtk.Box.append(self, self.empty_state)
@@ -97,15 +98,31 @@ class StructureWidget(Gtk.Box):
     def append_row(self, row):
         self.list_box.append(row)
 
+    def filter_rows(self, query):
+        query = query.lower() if query else ''
+        child = self.list_box.get_first_child()
+        any_visible = False
+        while child is not None:
+            if isinstance(child, Adw.ActionRow):
+                title = child.get_title() or ''
+                match = not query or query in title.lower()
+                child.set_visible(match)
+                if match:
+                    any_visible = True
+            child = child.get_next_sibling()
+        return any_visible
+
     def make_row(self, icon_name, text, indent):
         row = Adw.ActionRow()
         row.set_selectable(False)
         row.set_activatable(True)
+        prefix_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         if indent > 0:
             spaces = '\u00A0' * (indent // 6)
             prefix_label = Gtk.Label(label=spaces)
             prefix_label.set_xalign(1.0)
-            row.add_prefix(prefix_label)
-        row.add_prefix(Gtk.Image(icon_name=icon_name))
+            prefix_box.append(prefix_label)
+        prefix_box.append(Gtk.Image(icon_name=icon_name))
+        row.add_prefix(prefix_box)
         row.set_title(text)
         return row

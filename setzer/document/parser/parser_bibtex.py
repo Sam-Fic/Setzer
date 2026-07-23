@@ -59,7 +59,7 @@ class ParserBibTeX(Observable):
     def parse_symbols(self, text):
         bibitems = set()
         for match in ServiceLocator.get_regex_object(r'@(\w+)\{(\w+)').finditer(text):
-            bibitems = bibitems | {match.group(2).strip()}
+            bibitems.add(match.group(2).strip())
 
         self.symbols['bibitems'] = bibitems
 
