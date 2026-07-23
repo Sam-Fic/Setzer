@@ -6,7 +6,7 @@
  */
 
 /* 标题栏图标按钮：微悬停 / 按下时不显示底板色（透明）。
-   仅作用于带 .headerbar-icon 的图标按钮；文本按钮（Open 等）保留原生 hover。 */
+   仅作用于带 .headerbar-icon 的按钮。 */
 headerbar button.headerbar-plain.headerbar-icon:hover:not(:checked),
 headerbar button.headerbar-plain.headerbar-icon:active:not(:checked) {
     background-color: transparent;
@@ -100,13 +100,16 @@ textview gutter {
  * 空状态占位：现代、低调，避免空分区显得空洞。
  */
 .sidebar-empty-state {
-    padding: 4px 8px 12px;
+    padding: 4px 8px 8px;
     opacity: 0.85;
     margin-top: 0;
-    min-height: 0;
+    /* Keep the compact status page fully visible without taking so much
+       vertical space that the sidebar page starts scrolling just for the
+       empty state. */
+    min-height: 110px;
 }
 .sidebar-empty-state image {
-    -gtk-icon-size: 48px;
+    -gtk-icon-size: 32px;
 }
 .sidebar-empty-state .title {
     font-size: 0.95em;

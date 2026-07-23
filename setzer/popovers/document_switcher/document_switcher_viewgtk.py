@@ -43,13 +43,13 @@ class DocumentSwitcherView(object):
         self.explaination_label.set_xalign(0)
         self.explaination_label.add_css_class('dim-label')
         self.explaination_label.add_css_class('caption')
-        self.explaination_label.set_margin_top(6)
+        # 直接放入 PreferencesGroup，不用 ListBoxRow 包裹（避免 Libadwaita
+        # 给行绘制的边框/背景外框），用 margin 匹配标准行内边距。
+        self.explaination_label.set_margin_start(12)
+        self.explaination_label.set_margin_end(12)
+        self.explaination_label.set_margin_top(10)
         self.explaination_label.set_margin_bottom(6)
-        self.explaination_row = Gtk.ListBoxRow()
-        self.explaination_row.set_child(self.explaination_label)
-        self.explaination_row.set_activatable(False)
-        self.explaination_row.set_selectable(False)
-        self.explaination_group.add(self.explaination_row)
+        self.explaination_group.add(self.explaination_label)
         self.explaination_group.set_visible(False)
         self.page.add(self.explaination_group)
 

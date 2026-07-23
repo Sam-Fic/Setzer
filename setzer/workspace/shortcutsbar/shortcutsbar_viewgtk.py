@@ -279,6 +279,11 @@ class Shortcutsbar(Gtk.Box):
                     break
             target = min(target, n_left)
 
+        # target == 1 没意义：隐藏 1 个按钮但三点按钮占同等空间，净省 0。
+        # 直接显示全部按钮，跳过这个中间态。
+        if target == 1:
+            target = 0
+
         return max(0, target)
 
     def reflow_for_width(self, available_width):

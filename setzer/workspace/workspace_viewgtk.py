@@ -41,6 +41,9 @@ class MainWindow(Adw.ApplicationWindow):
         # 设置最小宽度：使用 breakpoint（窄窗口折叠侧边栏）时 Adw 要求窗口有
         # width-request，否则会告警。360 为 libadwaita 惯用的窄窗口下限。
         self.set_size_request(360, 550)
+        # 默认窗口尺寸：给侧栏和编辑器更多初始空间，减少空状态/少量内容时
+        # 侧栏页面出现不必要滚动条的可能。
+        self.set_default_size(1300, 900)
 
         self.popoverlay = Gtk.Overlay()
         self.set_content(self.popoverlay)
