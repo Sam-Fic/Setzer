@@ -405,6 +405,7 @@ class Shortcutsbar(Gtk.Box):
         '''Wire a Gio.Menu model to a Gtk.MenuButton and add the standard
         .menu CSS class to the auto-created Gtk.PopoverMenu — identical to
         how the hamburger menu is set up.'''
+        menu_builder.finalize()
         button.set_menu_model(menu_builder.model)
         popover = button.get_popover()
         if popover is not None:

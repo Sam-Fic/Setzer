@@ -97,7 +97,7 @@ class HeaderBar(object):
         self.save_document_button.set_can_focus(False)
         self.save_document_button.set_tooltip_text(_('Save the current document') + ' (' + _('Ctrl') + '+S)')
         self.save_document_button.set_action_name('win.save')
-        self.save_document_button.add_css_class('headerbar-plain')
+        self.save_document_button.add_css_class('raised')
 
         # help and preview toggles
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
