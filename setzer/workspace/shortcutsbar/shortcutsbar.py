@@ -90,27 +90,9 @@ class Shortcutsbar(object):
     def update_wizard_button(self, animate=False):
         if self.document == None: return
 
-        if self.document.is_latex_document():
-            self.view.wizard_button.set_visible(True)
+        # 与其他 latex 按钮一致：latex 文档时常驻显示，纯图标。
+        self.view.wizard_button.set_visible(self.document.is_latex_document())
 
-            is_visible = self.document.source_buffer.get_char_count() == 0 and self.width > 675
-            if is_visible and animate == False:
-                self.view.wizard_button_revealer.set_transition_type(Gtk.RevealerTransitionType.NONE)
-                self.view.wizard_button_revealer.set_reveal_child(True)
-                self.view.wizard_button_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_LEFT)
-                self.view.wizard_button_revealer.set_visible(True)
-            elif is_visible:
-                self.view.wizard_button_revealer.set_visible(True)
-                self.view.wizard_button_revealer.set_reveal_child(True)
-            elif animate == False:
-                self.view.wizard_button_revealer.set_visible(False)
-            else:
-                self.view.wizard_button_revealer.set_reveal_child(False)
-        else:
-            self.view.wizard_button.set_visible(False)
-
-        # wizard 按钮宽度可能因 revealer 展开/收起而改变，需重新计算 overflow
-        self.view.request_reflow()
 
     def update_buttons(self, workspace=None, parameter=None):
         if self.document == None: return

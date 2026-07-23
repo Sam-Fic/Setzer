@@ -6,14 +6,14 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import gi
 gi.require_version('Gtk', '4.0')
@@ -39,13 +39,15 @@ class DocumentSwitcher(Observable):
         self.workspace.connect('document_removed', self.on_document_removed)
         self.workspace.connect('new_active_document', self.on_new_active_document)
 
-        self.view.popover.connect('closed', self.on_popover_closed)
-        self.view.list_box.connect('row-activated', self.on_row_activated)
-        self.view.set_root_document_button.connect('clicked', self.set_selection_mode)
-        self.view.unset_root_document_button.connect('clicked', self.unset_root_document)
+        self.view.dialog.connect('closed', self.on_dialog_closed)
+        self.view.set_root_document_row.connect('activated', self.set_selection_mode)
+        self.view.unset_root_document_row.connect('activated', self.unset_root_document)
 
         self.update_items()
         self.update_unset_root_button()
+
+    def show(self):
+        self.view.dialog.present(self.main_window)
 
     def on_new_document(self, workspace, document):
         document.connect('filename_change', self.on_name_change)
@@ -77,7 +79,7 @@ class DocumentSwitcher(Observable):
     def on_modified_changed(self, document):
         self.update_items()
 
-    def on_row_activated(self, list_box, row):
+    def on_row_activated(self, row):
         if row is None:
             return
         document = row.document
@@ -86,7 +88,7 @@ class DocumentSwitcher(Observable):
             self.activate_normal_mode()
         else:
             self.workspace.set_active_document(document)
-            self.view.popover.popdown()
+            self.view.dialog.close()
 
     def on_close_button_clicked(self, button):
         row = button.row
@@ -99,12 +101,12 @@ class DocumentSwitcher(Observable):
             else:
                 previously_active_document = None
 
-            self.view.popover.popdown()
+            self.view.dialog.close()
             dialog = DialogLocator.get_dialog('close_confirmation')
             dialog.run({'unsaved_document': document, 'previously_active_document': previously_active_document}, self.on_close_document_callback)
         else:
             if document == self.workspace.get_active_document():
-                self.view.popover.popdown()
+                self.view.dialog.close()
             self.workspace.remove_document(document)
 
     def on_close_document_callback(self, parameters):
@@ -122,10 +124,9 @@ class DocumentSwitcher(Observable):
 
         if parameters['previously_active_document'] != None:
             self.workspace.set_active_document(parameters['previously_active_document'])
-            self.view.popover.popup()
+            self.view.dialog.present(self.main_window)
 
-    def on_popover_closed(self, popover=None):
-        self.view.scrolled_window.get_vadjustment().set_value(0)
+    def on_dialog_closed(self, dialog=None):
         active_document = self.workspace.get_active_document()
         if active_document != None:
             active_document.view.source_view.grab_focus()
@@ -133,16 +134,14 @@ class DocumentSwitcher(Observable):
 
     def update_items(self):
         self.view.update_items(self.workspace.open_documents, self.root_selection_mode)
-        # (re)wire close buttons for the freshly built rows
-        for row in self.iter_rows():
+        # (re)wire row + close-button handlers for the freshly built rows
+        for row in self.view.rows:
+            row.connect('activated', self.on_row_activated)
             row.close_button.connect('clicked', self.on_close_button_clicked)
         self.activate_set_root_document_button()
 
     def iter_rows(self):
-        row = self.view.list_box.get_first_child()
-        while row is not None:
-            yield row
-            row = row.get_next_sibling()
+        return list(self.view.rows)
 
     def set_selection_mode(self, action, parameter=None):
         self.activate_selection_mode()
@@ -153,30 +152,26 @@ class DocumentSwitcher(Observable):
 
     def activate_normal_mode(self):
         self.root_selection_mode = False
-        self.view.scrolled_window.get_vadjustment().set_value(0)
         self.activate_set_root_document_button()
         self.update_unset_root_button()
-        self.view.root_explaination_revealer.set_reveal_child(False)
+        self.view.explaination_group.set_visible(False)
         self.update_items()
 
     def activate_selection_mode(self):
         self.root_selection_mode = True
-        self.view.scrolled_window.get_vadjustment().set_value(0)
-        self.view.set_root_document_button.set_sensitive(False)
-        self.view.unset_root_document_button.set_sensitive(True)
-        self.view.root_explaination_revealer.set_reveal_child(True)
+        self.view.set_root_document_row.set_sensitive(False)
+        self.view.unset_root_document_row.set_sensitive(True)
+        self.view.explaination_group.set_visible(True)
         self.update_items()
 
     def activate_set_root_document_button(self):
         if len(self.workspace.open_latex_documents) > 0:
-            self.view.set_root_document_button.set_sensitive(True)
+            self.view.set_root_document_row.set_sensitive(True)
         else:
-            self.view.set_root_document_button.set_sensitive(False)
+            self.view.set_root_document_row.set_sensitive(False)
 
     def update_unset_root_button(self):
         if self.workspace.root_document != None:
-            self.view.unset_root_document_button.set_sensitive(True)
+            self.view.unset_root_document_row.set_sensitive(True)
         else:
-            self.view.unset_root_document_button.set_sensitive(False)
-
-
+            self.view.unset_root_document_row.set_sensitive(False)

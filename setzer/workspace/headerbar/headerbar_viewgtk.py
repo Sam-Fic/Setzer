@@ -61,11 +61,11 @@ class HeaderBar(object):
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
         box.append(Gtk.Label(label=_('Open')))
         box.append(Gtk.Image(icon_name='pan-down-symbolic'))
-        self.open_document_button = Gtk.MenuButton()
+        self.open_document_button = Gtk.Button()
         self.open_document_button.set_child(box)
         self.open_document_button.set_can_focus(False)
         self.open_document_button.set_tooltip_text(_('Open a document') + ' (' + _('Shift') + '+' + _('Ctrl') + '+O)')
-        self.open_document_button.set_popover(PopoverManager.get_popover('open_document').view.popover)
+        self.open_document_button.connect('clicked', lambda b: PopoverManager.get_popover('open_document').show())
         self.open_document_button.add_css_class('headerbar-plain')
 
         # new document
@@ -133,13 +133,13 @@ class HeaderBar(object):
         self.document_title.set_title('')
         self.document_title.set_subtitle('')
 
-        self.center_button = Gtk.MenuButton()
+        self.center_button = Gtk.Button()
         self.center_button.set_tooltip_text(_('Show open documents') + ' (' + _('Ctrl') + '+T)')
         self.center_button.set_can_focus(False)
+        self.center_button.set_halign(Gtk.Align.CENTER)
         self.center_button.set_child(self.document_title)
-        self.center_button.set_valign(Gtk.Align.FILL)
-        self.center_button.set_popover(self.open_docs_popover.view.popover)
         self.center_button.add_css_class('headerbar-plain')
+        self.center_button.connect('clicked', self._on_center_button_clicked)
 
         self.center_title_welcome = Adw.WindowTitle()
         self.center_title_welcome.set_title(_('Welcome to Setzer'))
@@ -150,3 +150,6 @@ class HeaderBar(object):
         self.center_widget.add_named(self.center_title_welcome, 'welcome')
 
         self.widget.set_title_widget(self.center_widget)
+
+    def _on_center_button_clicked(self, button):
+        self.open_docs_popover.show()

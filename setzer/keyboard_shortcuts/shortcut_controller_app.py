@@ -64,11 +64,11 @@ class ShortcutControllerApp(ShortcutController):
 
     def shortcut_show_document_chooser(self):
         if self.main_window.headerbar.open_document_button.get_sensitive():
-            PopoverManager.get_popover('open_document').view.popover.popup()
+            PopoverManager.get_popover('open_document').show()
 
     def shortcut_show_open_docs(self):
         if self.main_window.headerbar.center_button.get_sensitive():
-            PopoverManager.get_popover('document_switcher').view.popover.popup()
+            PopoverManager.get_popover('document_switcher').show()
 
     def shortcut_switch_document(self):
         self.workspace.switch_to_earliest_open_document()

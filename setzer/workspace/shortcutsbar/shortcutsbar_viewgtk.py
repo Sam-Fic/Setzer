@@ -298,23 +298,10 @@ class Shortcutsbar(Gtk.Box):
         self.left_buttons.append(button)
 
     def insert_wizard_button(self):
-        icon_widget = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        icon = Gtk.Image(icon_name='document-new-symbolic')
-        icon.set_margin_start(4)
-        icon_widget.append(icon)
-        label = Gtk.Label(label=_('New Document Wizard'))
-        label.set_margin_start(6)
-        label.set_margin_end(4)
-        self.wizard_button_revealer = Gtk.Revealer()
-        self.wizard_button_revealer.set_child(label)
-        self.wizard_button_revealer.set_transition_type(Gtk.RevealerTransitionType.SLIDE_LEFT)
-        self.wizard_button_revealer.set_reveal_child(True)
-        icon_widget.append(self.wizard_button_revealer)
-
         self.wizard_button = Gtk.Button()
+        self.wizard_button.set_icon_name('document-new-symbolic')
         self.wizard_button.set_tooltip_text(_('Create a template document'))
         self.wizard_button.set_can_focus(False)
-        self.wizard_button.set_child(icon_widget)
         self.wizard_button.set_action_name('win.show-document-wizard')
 
         self._add_left_button(self.wizard_button)

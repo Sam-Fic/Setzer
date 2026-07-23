@@ -13,8 +13,7 @@
 # GNU General Public License for more details.
 #
 # You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http://www.gnu.org/licenses/>
-
+# along with this program. If not see <http://www.gnu.org/licenses/>.
 
 import gi
 gi.require_version('Gtk', '4.0')
@@ -29,86 +28,69 @@ from setzer.app.service_locator import ServiceLocator
 class DocumentSwitcherView(object):
 
     def __init__(self):
-        self.popover = Gtk.Popover()
-        self.popover.set_size_request(440, -1)
+        # 标准 Libadwaita 对话框：自带标题栏、Esc 关闭、自适应宽度。
+        self.dialog = Adw.PreferencesDialog()
+        self.dialog.set_title(_('Open Documents'))
+        self.dialog.set_content_width(400)
+        self.dialog.set_content_height(480)
 
-        self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.popover.set_child(self.box)
+        self.page = Adw.PreferencesPage()
 
-        # 根文档说明（折叠在 revealer 中）：自动换行 + dim-label/caption 弱化，
-        # 去掉原先硬编码的 \n 换行，让宽度变化时由 GTK 自然折行。
-        self.root_explaination1 = Gtk.Label(label=_('Click on a document in the list below to set it as root.'))
-        self.root_explaination1.set_wrap(True)
-        self.root_explaination1.set_xalign(0)
-        self.root_explaination1.add_css_class('dim-label')
-        self.root_explaination1.add_css_class('caption')
-        self.root_explaination1.set_margin_top(12)
-        self.root_explaination1.set_margin_start(12)
-        self.root_explaination1.set_margin_end(12)
+        # 根文档说明：在 selection 模式下显示的描述 group。
+        self.explaination_group = Adw.PreferencesGroup()
+        self.explaination_label = Gtk.Label(label=_('Click on a document in the list below to set it as root. The root document will get built, no matter which document you are currently editing, and it will always display in the .pdf preview. The build log will also refer to the root document. This is often useful for working on large projects where typically a top level document (the root) will contain multiple lower level files via include statements.'))
+        self.explaination_label.set_wrap(True)
+        self.explaination_label.set_xalign(0)
+        self.explaination_label.add_css_class('dim-label')
+        self.explaination_label.add_css_class('caption')
+        self.explaination_label.set_margin_top(6)
+        self.explaination_label.set_margin_bottom(6)
+        self.explaination_row = Gtk.ListBoxRow()
+        self.explaination_row.set_child(self.explaination_label)
+        self.explaination_row.set_activatable(False)
+        self.explaination_row.set_selectable(False)
+        self.explaination_group.add(self.explaination_row)
+        self.explaination_group.set_visible(False)
+        self.page.add(self.explaination_group)
 
-        self.root_explaination2 = Gtk.Label(label=_('The root document will get built, no matter which document you are currently editing, and it will always display in the .pdf preview. The build log will also refer to the root document. This is often useful for working on large projects where typically a top level document (the root) will contain multiple lower level files via include statements.'))
-        self.root_explaination2.set_wrap(True)
-        self.root_explaination2.set_xalign(0)
-        self.root_explaination2.add_css_class('dim-label')
-        self.root_explaination2.add_css_class('caption')
-        self.root_explaination2.set_margin_top(6)
-        self.root_explaination2.set_margin_start(12)
-        self.root_explaination2.set_margin_end(12)
-        self.root_explaination2.set_margin_bottom(6)
+        # 已打开文档列表：标准 Adw.PreferencesGroup + Adw.ActionRow。
+        self.group = Adw.PreferencesGroup()
+        self.page.add(self.group)
 
-        self.root_explaination_box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-        self.root_explaination_box.append(self.root_explaination1)
-        self.root_explaination_box.append(self.root_explaination2)
-        self.root_explaination_revealer = Gtk.Revealer()
-        self.root_explaination_revealer.set_child(self.root_explaination_box)
-        self.root_explaination_revealer.set_reveal_child(False)
-        self.box.append(self.root_explaination_revealer)
+        # 底部动作：Set as Root / Unset Root（独立 PreferencesGroup + ActionRow）。
+        self.root_group = Adw.PreferencesGroup()
+        self.set_root_document_row = Adw.ActionRow()
+        self.set_root_document_row.set_activatable(True)
+        self.set_root_document_row.set_title(_('Set one Document as Root'))
+        self.set_root_document_row.set_icon_name('document-properties-symbolic')
+        self.root_group.add(self.set_root_document_row)
 
-        # 已打开文档列表：boxed-list 圆角卡片，与边缘保持 12px 间距。
-        self.list_box = Gtk.ListBox()
-        self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
-        self.list_box.add_css_class('boxed-list')
+        self.unset_root_document_row = Adw.ActionRow()
+        self.unset_root_document_row.set_activatable(True)
+        self.unset_root_document_row.set_title(_('Unset Root Document'))
+        self.unset_root_document_row.set_icon_name('document-edit-symbolic')
+        self.root_group.add(self.unset_root_document_row)
+        self.page.add(self.root_group)
 
-        self.scrolled_window = Gtk.ScrolledWindow()
-        self.scrolled_window.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
-        self.scrolled_window.set_child(self.list_box)
-        self.scrolled_window.set_min_content_height(120)
-        self.scrolled_window.set_max_content_height(400)
-        self.scrolled_window.set_propagate_natural_height(True)
-        self.scrolled_window.set_margin_start(12)
-        self.scrolled_window.set_margin_end(12)
-        self.scrolled_window.set_margin_top(6)
-        self.scrolled_window.set_margin_bottom(6)
-        self.box.append(self.scrolled_window)
+        self.dialog.add(self.page)
 
-        # 底部动作区：两个按钮横向并排、各占一半，四周留白。
-        self.bottom_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        self.bottom_box.set_margin_start(12)
-        self.bottom_box.set_margin_end(12)
-        self.bottom_box.set_margin_top(6)
-        self.bottom_box.set_margin_bottom(12)
-
-        self.set_root_document_button = Gtk.Button.new_with_label(_('Set one Document as Root'))
-        self.set_root_document_button.set_can_focus(False)
-        self.set_root_document_button.set_hexpand(True)
-        self.unset_root_document_button = Gtk.Button.new_with_label(_('Unset Root Document'))
-        self.unset_root_document_button.set_can_focus(False)
-        self.unset_root_document_button.set_hexpand(True)
-        self.bottom_box.append(self.set_root_document_button)
-        self.bottom_box.append(self.unset_root_document_button)
-        self.box.append(self.bottom_box)
+        self.items = []
+        self.rows = []
 
     def update_items(self, documents, root_selection_mode=False):
-        self.list_box.remove_all()
         visible_documents = [d for d in documents if (not root_selection_mode or d.is_latex_document())]
         visible_documents.sort(key=lambda val: -val.get_last_activated())
+
+        for row in self.rows:
+            self.group.remove(row)
+        self.rows = []
         for document in visible_documents:
             row = self.create_row(document, root_selection_mode)
-            self.list_box.append(row)
+            self.group.add(row)
+            self.rows.append(row)
 
     def create_row(self, document, root_selection_mode):
         row = Adw.ActionRow()
-        # 必须显式设为可激活，否则单击不会触发 ListBox::row-activated。
         row.set_activatable(True)
         row.document = document
 

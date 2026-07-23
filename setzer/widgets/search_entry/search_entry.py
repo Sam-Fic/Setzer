@@ -34,3 +34,6 @@ class SearchEntry(Gtk.SearchEntry):
 
     def __init__(self):
         Gtk.SearchEntry.__init__(self)
+        # GTK 4 的 Gtk.SearchEntry 默认 focusable=False，必须显式开启，
+        # 否则光标/焦点无法进入搜索框，无法输入。
+        self.set_focusable(True)
