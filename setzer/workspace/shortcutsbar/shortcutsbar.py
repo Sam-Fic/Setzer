@@ -39,12 +39,8 @@ class Shortcutsbar(object):
         self.workspace.connect('show_build_log_state_change', self.update_buttons)
         self.workspace.connect('root_state_change', self.on_root_state_change)
 
-        # 不再监听 build_log_paned 的 'width-changed'：_WidthReportingPaned 已停止
-        # emit（见 workspace_viewgtk.py），且其回调仅做 update_wizard_button，
-        # 该工作由 on_new_active_document 覆盖（is_latex_document() 在文档
-        # 生命周期内不变，无需每次按键触发）。
-        self.build_log_paned = ServiceLocator.get_main_window().build_log_paned
-
+        # Pass-10: build_log_paned 已移除（build_log 改为弹窗）。原 width-changed
+        # 监听早已无操作（注释说明），此处一并清理。
         self.document = self.workspace.active_document
         if self.document != None:
             self.document.search.connect('mode_changed', self.update_buttons)

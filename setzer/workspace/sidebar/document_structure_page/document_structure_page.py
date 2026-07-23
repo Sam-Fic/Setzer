@@ -31,6 +31,8 @@ class DocumentStructurePage(Gtk.Box):
         self.sections = dict()
         self.section_titles = list()
         self.scroll_to = None
+        self._current_section_title = ''  # 缓存 section title，用于变化检测
+        self._groups_cache = None         # page 的 group 列表缓存
 
         self.add_buttons()
 
@@ -54,6 +56,7 @@ class DocumentStructurePage(Gtk.Box):
         self.page.add(group)
         self.sections[name] = group
         self.section_titles.append(title)
+        self._groups_cache = None    # 结构变化，失效缓存
         return group
 
     def set_section_visible(self, name, visible):
@@ -98,17 +101,21 @@ class DocumentStructurePage(Gtk.Box):
 
     def on_scroll_or_resize(self, *args):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
-        if scrolling_offset == 0:
-            self.prev_button.set_sensitive(False)
-        else:
-            self.prev_button.set_sensitive(True)
+        self.prev_button.set_sensitive(scrolling_offset != 0)
 
-        label_offsets = self.get_section_offsets()
+        # 一次取 visible sections，复用给按钮敏感度 + section label（原实现调用 2 次）
+        visible_sections = self.get_visible_sections()
+        label_offsets = [y for (title, y) in visible_sections]
+
         height_condition = scrolling_offset < self.page.get_allocated_height() - self.scrolled_window.get_allocated_height()
         label_condition = len(label_offsets) > 0 and scrolling_offset < label_offsets[-1]
         self.next_button.set_sensitive(height_condition and label_condition)
 
-        self.update_section_label()
+        # section title：仅变化时 set_text，避免每帧触发 Gtk.Label 无谓重绘
+        current_title = self._compute_current_title(visible_sections)
+        if current_title != self._current_section_title:
+            self._current_section_title = current_title
+            self.section_label.set_text(current_title)
 
     def get_visible_sections(self):
         """返回 [(title, viewport_y), ...]，仅含当前可见的 group，按显示顺序。"""
@@ -127,9 +134,11 @@ class DocumentStructurePage(Gtk.Box):
     def get_section_offsets(self):
         return [y for (title, y) in self.get_visible_sections()]
 
-    def get_current_section_title(self):
-        """返回当前滚动到视口顶部的分区标题；视口顶部位于第一段之前时返回首段标题。"""
-        sections = self.get_visible_sections()
+    def _compute_current_title(self, sections):
+        '''返回当前滚动到视口顶部的分区标题；视口顶部位于第一段之前时返回首段标题。
+
+        接收已取的 visible_sections，避免重复调用 get_visible_sections。
+        '''
         if len(sections) == 0:
             return ''
         current = sections[0][0]
@@ -140,16 +149,26 @@ class DocumentStructurePage(Gtk.Box):
                 break
         return current
 
-    def update_section_label(self):
-        self.section_label.set_text(self.get_current_section_title())
-
     def get_page_groups(self):
-        groups = list()
-        child = self.page.get_first_child()
+        # Adw.PreferencesPage 的实际结构：page → ScrolledWindow → Viewport →
+        # Clamp → Box → [Label, PreferencesGroup, ...]。groups 不是 page 的直接
+        # 子控件，需递归收集。原实现遍历 page 直接子只得到 ScrolledWindow，
+        # 导致 on_scroll_or_resize 一直只认到 1 个「section」，section 导航与
+        # 「当前分区」label 功能失效——此处一并修复。
+        if self._groups_cache is None:
+            groups = list()
+            self._collect_groups(self.page, groups)
+            self._groups_cache = groups
+        return self._groups_cache
+
+    def _collect_groups(self, widget, out):
+        child = widget.get_first_child()
         while child is not None:
-            groups.append(child)
+            if isinstance(child, Adw.PreferencesGroup):
+                out.append(child)
+            else:
+                self._collect_groups(child, out)
             child = child.get_next_sibling()
-        return groups
 
     def on_next_button_clicked(self, button):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()

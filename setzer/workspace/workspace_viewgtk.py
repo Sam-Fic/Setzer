@@ -24,7 +24,6 @@ import os
 
 from setzer.app.service_locator import ServiceLocator
 
-import setzer.workspace.build_log.build_log_viewgtk as build_log_view
 import setzer.workspace.headerbar.headerbar_viewgtk as headerbar_view
 import setzer.workspace.shortcutsbar.shortcutsbar_viewgtk as shortcutsbar_view
 import setzer.workspace.preview_panel.preview_panel_viewgtk as preview_panel_view
@@ -62,24 +61,11 @@ class MainWindow(Adw.ApplicationWindow):
         self.document_stack_wrapper.append(self.shortcutsbar)
         self.document_stack_wrapper.append(self.document_stack)
 
-        self.build_log = build_log_view.BuildLogView()
-
-        # build_log_paned: 纵向 Gtk.Paned（编辑器在上，构建日志在下）。
-        # 原为 _WidthReportingPaned 子类（do_size_allocate 中 emit 'width-changed'），
-        # 该信号已无监听者，reflow 由 Shortcutsbar.do_size_allocate 主路径 +
-        # _poll_sb_width 兜底负责，故直接用原生 Gtk.Paned。
-        self.build_log_paned = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
-        self.build_log_paned.set_start_child(self.document_stack_wrapper)
-        self.build_log_paned.set_end_child(self.build_log)
-        self.build_log_paned.set_resize_start_child(True)
-        self.build_log_paned.set_resize_end_child(False)
-        # shrink_start_child=True 允许编辑器列被压缩，配合 shortcutsbar overflow
-        # 让窗口可以拖到很窄
-        self.build_log_paned.set_shrink_start_child(True)
-        self.build_log_paned.set_shrink_end_child(True)
-        # 不设 set_size_request(550)——shortcutsbar 的 overflow reflow 会让
-        # 按钮在窄宽时自动收起，不再需要硬性最小宽度。这样窗口可以拖到更小。
-
+        # Pass-10: build_log 从底部嵌入式 Gtk.Paned 改为 Adw.Dialog 弹窗
+        # （BuildLogDialog），不再常驻 widget tree。原 build_log_paned（纵向
+        # Gtk.Paned，编辑器在上、build_log 在下）整体移除，preview_paned 直接
+        # 以 document_stack_wrapper 为 start_child。build_log 实例由 workspace
+        # 持有（workspace.py:80），按需 present/close。
         self.preview_panel = preview_panel_view.PreviewPanelView()
 
         self.help_panel = help_panel_view.HelpPanelView()
@@ -91,10 +77,12 @@ class MainWindow(Adw.ApplicationWindow):
         self.preview_help_stack.add_named(self.preview_panel, 'preview')
         self.preview_help_stack.add_named(self.help_panel, 'help')
 
-        # preview_paned: 横向 Gtk.Paned（预览/帮助在右 = end child），可拖动分隔条调整宽度
+        # preview_paned: 横向 Gtk.Paned（预览/帮助在右 = end child），可拖动分隔条调整宽度。
+        # Pass-10: start_child 从 build_log_paned 改为 document_stack_wrapper
+        # （build_log_paned 已移除）。
         self.preview_paned = Gtk.Paned(orientation=Gtk.Orientation.HORIZONTAL)
         self.preview_paned.set_wide_handle(True)
-        self.preview_paned.set_start_child(self.build_log_paned)
+        self.preview_paned.set_start_child(self.document_stack_wrapper)
         self.preview_paned.set_end_child(self.preview_help_stack)
         # shrink_start_child=True：编辑器列允许收缩到低于其自然宽度。
         # 必要原因：shortcutsbar 在最宽档位（target=0）时全部 10 个左侧按钮都在
@@ -158,10 +146,11 @@ class MainWindow(Adw.ApplicationWindow):
         # 兜底，覆盖 do_size_allocate 可能漏掉的边缘情况（如某些 GTK4 版本
         # vfunc 覆写不稳定）。主路径可靠时此轮询几乎不做实际工作，
         # 1000ms 足够兜底且把空闲唤醒频率从 5Hz 降到 1Hz。
-        # 关键：必须测 shortcutsbar 自身宽度（= build_log_paned 宽度，不含 sidebar
-        # 和 preview），而不是窗口宽度。窗口 1536px 但 sidebar+preview 占大半时,
-        # shortcutsbar 可能只有 500px——若传 1536 给 reflow，会误判有空间导致
-        # target=0，按钮被挤出去。
+        # 关键：必须测 shortcutsbar 自身宽度（= preview_paned 的 start_child
+        # 即 document_stack_wrapper 宽度，不含 sidebar 和 preview），而不是
+        # 窗口宽度。窗口 1536px 但 sidebar+preview 占大半时, shortcutsbar 可能
+        # 只有 500px——若传 1536 给 reflow，会误判有空间导致 target=0，
+        # 按钮被挤出去。
         self._last_sb_width = -1
         self._reflow_source = None
         self._pending_width = None

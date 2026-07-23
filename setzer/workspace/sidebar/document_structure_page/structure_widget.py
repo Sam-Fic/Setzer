@@ -39,6 +39,7 @@ class StructureWidget(Gtk.ListBox):
         self.set_selection_mode(Gtk.SelectionMode.NONE)
         self.set_activate_on_single_click(True)
         self.set_can_focus(False)
+        self.add_css_class('compact-rows')   # 收紧行距，配合 style_gtk.css
         self.connect('row-activated', self.on_row_activated)
 
         # 签名短路：populate() 调用 populate_if_changed(signature)，若签名与

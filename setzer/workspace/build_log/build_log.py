@@ -6,20 +6,18 @@
 # it under the terms of the GNU General Public License as published by
 # the Free Software Foundation, either version 3 of the License, or
 # (at your option) any later version.
-# 
+#
 # This program is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 # GNU General Public License for more details.
-# 
+#
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
-import setzer.workspace.build_log.build_log_presenter as build_log_presenter
-import setzer.workspace.build_log.build_log_controller as build_log_controller
+import setzer.dialogs.build_log.build_log_dialog as build_log_dialog
 from setzer.helpers.observable import Observable
 from setzer.app.service_locator import ServiceLocator
-from setzer.helpers.timer import timer
 
 
 class BuildLog(Observable):
@@ -31,11 +29,22 @@ class BuildLog(Observable):
         self.document = None
 
         self.items = list()
-        self.hover_item = None
 
-        self.view = ServiceLocator.get_main_window().build_log
-        self.presenter = build_log_presenter.BuildLogPresenter(self, self.view)
-        self.controller = build_log_controller.BuildLogController(self, self.view)
+        # Pass-10: view 从嵌入式 Gtk.Box（BuildLogView）改为 Adw.Dialog 弹窗
+        # （BuildLogDialog wrapper）。dialog 实例在此创建，按需 present/close。
+        # wire(self) 注入 BuildLog 模型，建立 presenter + controller 双向连接。
+        self.view = build_log_dialog.BuildLogDialog(ServiceLocator.get_main_window())
+        self.view.wire(self)
+
+        # is_open 标志位：Adw.Dialog 没有可靠的 is_open 属性（get_visible 语义是
+        # widget 已 mapped），用自身标志位追踪。present 时置 True，closed 信号
+        # 触发时置 False。workspace_presenter 据此判断切换文档时是否需刷新内容。
+        self.is_open = False
+
+        # 监听 dialog 关闭：用户按 Esc / 点 HeaderBar close 按钮关闭弹窗时，
+        # 同步 workspace.show_build_log=False，触发 shortcutsbar toggle button 复位。
+        # Adw.Dialog 的 closed 信号在 document_switcher / document_chooser 已有先例。
+        self.view.view.connect('closed', self.on_dialog_closed)
 
     def on_build_log_update(self, build_system):
         if build_system.document == self.document:
@@ -51,20 +60,12 @@ class BuildLog(Observable):
         self.update_items()
         self.document.build_system.connect('build_log_update', self.on_build_log_update)
 
-    #@timer
     def update_items(self, just_built=False):
         self.items = self.document.build_system.build_log_data['items']
         self.signal_finish_adding()
 
         if just_built and self.has_items(self.settings.get_value('preferences', 'autoshow_build_log')):
             self.workspace.set_show_build_log(True)
-
-        self.set_hover_item(None)
-
-    def set_hover_item(self, item_num): 
-        if self.hover_item != item_num:
-            self.hover_item = item_num
-            self.add_change_code('hover_item_changed')
 
     def signal_finish_adding(self):
         self.add_change_code('build_log_finished_adding', self.document.build_system.document_has_been_built)
@@ -85,4 +86,21 @@ class BuildLog(Observable):
             return self.document.build_system.get_badbox_count()
         return 0
 
+    def on_present(self):
+        '''由 workspace_presenter 在 present 弹窗后调用，更新 is_open 标志。'''
+        self.is_open = True
 
+    def on_dialog_closed(self, dialog):
+        '''Adw.Dialog 的 closed 信号回调。
+
+        同步 workspace.show_build_log=False：
+          - 触发 show_build_log_state_change
+          - workspace_presenter.update_build_log_visibility 调 close（幂等，已关闭）
+          - shortcutsbar.update_buttons 调 button_build_log.set_active(False)
+          - GTK4 中程序 set_active 不触发 clicked，无循环
+        '''
+        self.is_open = False
+        # 仅当当前 workspace 状态认为弹窗仍打开时才同步，避免 close→set(False)→
+        # state_change→close 的无谓递归（虽然 close 幂等，但减少信号噪声）。
+        if self.workspace.get_show_build_log():
+            self.workspace.set_show_build_log(False)

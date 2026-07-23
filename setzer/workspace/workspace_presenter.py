@@ -43,7 +43,6 @@ class WorkspacePresenter(object):
         self.main_window.mode_stack.set_visible_child_name('welcome_screen')
         self.update_font()
         self.update_colors()
-        self._build_log_position = None
         self.setup_paneds()
 
     def on_settings_changed(self, settings, parameter):
@@ -74,11 +73,13 @@ class WorkspacePresenter(object):
             except AttributeError: pass
 
         self.update_sidebar_visibility(False)
-        self.update_build_log_visibility(False)
+        # Pass-10: 切换文档时弹窗若已打开，刷新内容为新文档的 build_log
+        # （不关闭重开，保留弹窗位置/尺寸）。
+        self.refresh_build_log_if_open()
         self.update_preview_help_visibility(False)
 
     def on_root_state_change(self, workspace, state):
-        self.update_build_log_visibility(False)
+        self.update_build_log_visibility()
         self.update_preview_help_visibility(False)
 
     def on_new_inactive_document(self, workspace, document):
@@ -119,10 +120,35 @@ class WorkspacePresenter(object):
         self.main_window.sidebar_split.set_show_sidebar(show_sidebar)
 
     def update_build_log_visibility(self, animate=True):
+        '''Pass-10: 从 set_visible 底部面板改为 present/close 弹窗。
+
+        show_build_log=True 时 present dialog（若尚未打开）；False 时 close。
+        present 前先调 presenter.populate 刷新内容（覆盖 autoshow 触发时
+        items 已更新但 view 未同步的情况，以及启动时恢复弹窗状态）。
+        '''
         show_build_log = self.workspace.get_root_or_active_latex_document() and self.workspace.show_build_log
-        self.main_window.build_log.set_visible(show_build_log)
-        if show_build_log and self._build_log_position is not None:
-            self.main_window.build_log_paned.set_position(self._build_log_position)
+        build_log = self.workspace.build_log
+        if show_build_log:
+            if not build_log.is_open:
+                # present 前刷新内容：确保打开的是当前文档的最新 build_log。
+                # populate 会处理 document 为 None 的情况（显示 empty_label）。
+                if build_log.view.presenter is not None:
+                    build_log.view.presenter.populate()
+                build_log.view.present()
+                build_log.on_present()
+        else:
+            # close 幂等：未打开时 close 无副作用。
+            build_log.view.close()
+
+    def refresh_build_log_if_open(self):
+        '''切换文档时：弹窗若打开，刷新内容；不自动开关。
+
+        与 update_build_log_visibility 的区别：后者根据 workspace.show_build_log
+        状态决定 present/close；前者仅在已打开时刷新内容，保留弹窗状态。
+        '''
+        build_log = self.workspace.build_log
+        if build_log.is_open and build_log.view.presenter is not None:
+            build_log.view.presenter.populate()
 
     def update_preview_help_visibility(self, animate=True):
         preview_help_visible_for_latex_docs = self.workspace.show_preview or self.workspace.show_help
@@ -152,21 +178,19 @@ class WorkspacePresenter(object):
         show_sidebar = self.workspace.get_active_latex_document() and sidebar_visible_for_latex_docs
         preview_help_visible_for_latex_docs = self.workspace.show_preview or self.workspace.show_help
         show_preview_help = self.workspace.get_root_or_active_latex_document() and preview_help_visible_for_latex_docs
+        # Pass-10: build_log 弹窗化后，初始显隐走 update_build_log_visibility
+        # （present/close dialog），不再用 set_visible + paned position。
         show_build_log = self.workspace.get_root_or_active_latex_document() and self.workspace.get_show_build_log()
 
         sidebar_fraction = self.workspace.settings.get_value('window_state', 'sidebar_width_fraction')
         preview_position = self.workspace.settings.get_value('window_state', 'preview_paned_position')
-        build_log_position = self.workspace.settings.get_value('window_state', 'build_log_paned_position')
 
-        # sidebar 宽度（Adw.OverlaySplitView 按 fraction）；preview/build_log 仍像素 position
+        # sidebar 宽度（Adw.OverlaySplitView 按 fraction）；preview 仍像素 position
         if isinstance(sidebar_fraction, (int, float)) and 0.0 < sidebar_fraction <= 1.0:
             self.main_window.sidebar_split.set_sidebar_width_fraction(sidebar_fraction)
         if isinstance(preview_position, int) and preview_position > 0:
             self.main_window.preview_paned.set_position(preview_position)
-        # build_log 分隔条（像素，纵向 Gtk.Paned）
-        if isinstance(build_log_position, int) and build_log_position > 0:
-            self._build_log_position = build_log_position
-            self.main_window.build_log_paned.set_position(build_log_position)
+        # build_log_paned_position 设置项已废弃（弹窗尺寸由 Adw.Dialog 自管理）。
 
         if self.workspace.show_symbols: self.main_window.sidebar.set_visible_child_name('symbols')
         elif self.workspace.show_document_structure: self.main_window.sidebar.set_visible_child_name('document_structure')
@@ -174,15 +198,16 @@ class WorkspacePresenter(object):
         if self.workspace.show_preview: self.main_window.preview_help_stack.set_visible_child_name('preview')
         elif self.workspace.show_help: self.main_window.preview_help_stack.set_visible_child_name('help')
 
-        # 初始显隐（首次无动画）
-        self.main_window.build_log.set_visible(show_build_log)
+        # 初始显隐（首次无动画）。build_log 走 update_build_log_visibility
+        # （present dialog 而非 set_visible 面板）。
+        if show_build_log:
+            self.update_build_log_visibility()
         self.main_window.sidebar_split.set_show_sidebar(show_sidebar)
         self.main_window.preview_help_stack.set_visible(show_preview_help)
 
         # 拖动分隔条时实时持久化到 settings（仅更新内存 dict，pickle 在关闭时落盘）
         self.main_window.sidebar_split.connect('notify::sidebar-width-fraction', self.on_sidebar_width_changed)
         self.main_window.preview_paned.connect('notify::position', self.on_preview_width_changed)
-        self.main_window.build_log_paned.connect('notify::position', self.on_build_log_position_changed)
 
         self.main_window.headerbar.symbols_toggle.set_active(self.workspace.show_symbols)
         self.main_window.headerbar.document_structure_toggle.set_active(self.workspace.show_document_structure)
@@ -194,10 +219,5 @@ class WorkspacePresenter(object):
 
     def on_preview_width_changed(self, paned, pspec):
         self.workspace.settings.set_value('window_state', 'preview_paned_position', paned.get_position())
-
-    def on_build_log_position_changed(self, paned, pspec):
-        if self.main_window.build_log.get_visible():
-            self._build_log_position = paned.get_position()
-            self.workspace.settings.set_value('window_state', 'build_log_paned_position', paned.get_position())
 
 

@@ -35,7 +35,8 @@ headerbar button.headerbar-plain.headerbar-icon:active:not(:checked) {
 
 /* 符号面板的搜索条：左右留白，与上方工具栏、下方符号网格区分。 */
 /* 隐藏 GtkSourceView 内置行号 gutter，由自定义 Gutter 统一绘制。 */
-.sourceview gutter:first-child {
+.sourceview gutter,
+textview gutter {
     min-width: 0;
     padding: 0;
     background: transparent;
@@ -43,4 +44,19 @@ headerbar button.headerbar-plain.headerbar-icon:active:not(:checked) {
 
 .sidebar-search-bar {
     padding: 6px 10px 8px;
+}
+
+/*
+ * 收紧 Adw.ActionRow 行距：构建日志面板与文档结构侧边栏共用。
+ * libadwaita 默认 list row 垂直 padding 较大（~8px）+ ActionRow 内部 .header
+ * box 上下 margin（~6px），行距偏松。.compact-rows 作用域内收紧到更紧凑密度。
+ * 仅作用于带 .compact-rows 的 ListBox，不影响其他列表。
+ */
+.compact-rows row {
+    padding-top: 2px;
+    padding-bottom: 2px;
+}
+.compact-rows row > .header {
+    margin-top: 1px;
+    margin-bottom: 1px;
 }

@@ -255,8 +255,8 @@ class Gutter(object):
             if line != prev_line:
                 drawing_offset = offset - self.adjustment.get_value()
                 if drawing_offset < 0:
-                    drawing_offset = min(0, drawing_offset + line_height - self.line_height)
-                self.draw_line(ctx, line, current_line == line, drawing_offset)
+                    drawing_offset = min(0, drawing_offset)
+                self.draw_line(ctx, line, current_line == line, drawing_offset, line_height)
 
             prev_line = line
             offset += line_height
@@ -272,14 +272,14 @@ class Gutter(object):
         ctx.rectangle(self.total_width, 0, 1, height)
         ctx.fill()
 
-    def draw_line(self, ctx, line, is_current, offset):
+    def draw_line(self, ctx, line, is_current, offset, line_height):
         if self.line_numbers_visible:
-            self.draw_line_number(ctx, line, is_current, offset)
+            self.draw_line_number(ctx, line, is_current, offset, line_height)
 
         if self.code_folding_visible:
             self.draw_folding_region(ctx, line, is_current, offset)
 
-    def draw_line_number(self, ctx, line, is_current, offset):
+    def draw_line_number(self, ctx, line, is_current, offset, line_height):
         if is_current:
             text = '<b>' + str(line + 1) + '</b>'
         else:
@@ -296,7 +296,10 @@ class Gutter(object):
 
         self.layout.set_markup(text)
 
-        offset += (self.line_height - self.layout.get_extents().logical_rect.height / Pango.SCALE) / 2 + 1
+        # 用实际行高做垂直居中，不依赖 self.line_height 缓存（可能因 realized
+        # 时序/wrapping/字体变化未及时更新而与实际行高不一致）。
+        text_height = self.layout.get_extents().logical_rect.height / Pango.SCALE
+        offset += (line_height - text_height) / 2
         ctx.move_to(0, offset)
 
         PangoCairo.show_layout(ctx, self.layout)

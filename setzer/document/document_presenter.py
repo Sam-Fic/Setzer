@@ -17,7 +17,7 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
+from gi.repository import Gtk, GLib
 
 from setzer.app.service_locator import ServiceLocator
 
@@ -30,7 +30,13 @@ class DocumentPresenter(object):
         self.view = document_view
         self.settings = ServiceLocator.get_settings()
 
-        self.view.source_view.set_show_line_numbers(False)
+        self.view.source_view.props.show_line_numbers = False
+        def _on_map(widget):
+            widget.props.show_line_numbers = False
+            gutter = widget.get_gutter(Gtk.TextWindowType.LEFT)
+            if gutter is not None:
+                gutter.set_visible(False)
+        self.view.source_view.connect('map', _on_map)
         self.view.source_view.set_insert_spaces_instead_of_tabs(self.settings.get_value('preferences', 'spaces_instead_of_tabs'))
         self.view.source_view.set_tab_width(self.settings.get_value('preferences', 'tab_width'))
         self.view.source_view.set_highlight_current_line(self.settings.get_value('preferences', 'highlight_current_line'))

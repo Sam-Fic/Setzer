@@ -55,7 +55,8 @@ class Settings(Observable):
         self.defaults['window_state']['show_build_log'] = False
         self.defaults['window_state']['preview_paned_position'] = -1
         self.defaults['window_state']['notebook_paned_position'] = -1
-        self.defaults['window_state']['build_log_paned_position'] = -1
+        # Pass-10: build_log_paned_position 已废弃（build_log 改为 Adw.Dialog 弹窗，
+        # 尺寸由 dialog 自管理）。旧 pickle 文件中若有该 key 不影响，只是不再读它。
         
         self.defaults['app_document_wizard'] = dict()
         self.defaults['app_document_wizard']['presets'] = None

@@ -15,7 +15,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"Plural-Forms: nplurals=1; plural=0;\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
 "X-Generator: CodeBuddy\n"
 
 #: data/org.cvfosammmm.Setzer.metainfo.xml.in:8
@@ -1406,7 +1406,7 @@ msgid ""
 "No LaTeX interpreter found. For instructions on installing LaTeX see <a "
 "href=\"https://en.wikibooks.org/wiki/LaTeX/Installation\">https://en."
 "wikibooks.org/wiki/LaTeX/Installation</a>"
-msgstr "未找到 LaTeX 解释器。有关安装 LaTeX 的说明，请参阅 <a "
+msgstr "未找到 LaTeX 解释器。有关安装 LaTeX 的说明，请参阅 <a href=\"https://en.wikibooks.org/wiki/LaTeX/Installation\">https://en.wikibooks.org/wiki/LaTeX/Installation</a>"
 #: setzer/dialogs/preferences/pages/page_build_system.py:164
 msgid ""
 "Please note: the Tectonic backend uses only the V1 command-line interface. "
@@ -1627,6 +1627,7 @@ msgstr "拼写检查语言"
 msgid "<span color=\"{color}\">Failed</span> ({amount} error)!"
 msgid_plural "<span color=\"{color}\">Failed</span> ({amount} errors)!"
 msgstr[0] "<span color=\"{color}\">已失败</span>（{amount} 个错误）！"
+msgstr[1] "<span color=\"{color}\">已失败</span>（{amount} 个错误）！"
 
 #: setzer/document/build_system/build_system.py:225
 msgid "Success!"
