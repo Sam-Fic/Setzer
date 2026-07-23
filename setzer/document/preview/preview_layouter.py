@@ -34,7 +34,7 @@ class PreviewLayouter(Observable):
             layout.page_width = layout.scale_factor * self.preview.page_width
             layout.page_height = layout.scale_factor * self.preview.page_height
             layout.page_gap = layout.hidpi_factor * 10
-            layout.border_width = 1
+            layout.border_width = 0
             layout.canvas_width = layout.page_width + 2 * layout.get_horizontal_margin(window_width)
             layout.canvas_height = self.preview.poppler_document.get_n_pages() * (layout.page_height + layout.page_gap) - layout.page_gap
             self.update_synctex_rectangles(layout)

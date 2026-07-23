@@ -24,7 +24,6 @@ headerbar button.headerbar-plain.headerbar-icon:active:not(:checked) {
 .sidebar-toolbar {
     padding: 6px 10px;
     min-height: 36px;
-    box-shadow: inset 0 -1px 0 alpha(currentColor, 0.08);
 }
 
 /* 工具栏左侧的“当前分区”标题：随滚动更新，dim-label 提供灰化，
@@ -92,20 +91,8 @@ textview gutter {
 }
 
 /*
- * 列表容器圆角：让 ActionRow 列表在分组内呈现卡片式圆角。
- * GTK CSS 不支持 overflow，因此对首行/末行单独设置圆角。
+ * 列表容器圆角：boxed-list 提供 libadwaita 标准卡片外观（圆角 + 行间分隔线）。
  */
-.sidebar-section-group list {
-    border-radius: 12px;
-}
-.sidebar-section-group list row:first-child {
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-}
-.sidebar-section-group list row:last-child {
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-}
 
 /*
  * 空状态占位：现代、低调，避免空分区显得空洞。

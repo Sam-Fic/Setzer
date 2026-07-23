@@ -51,7 +51,6 @@ class SymbolsPageView(Gtk.Box):
         self.toolbar.append(self.section_label)
 
         self.nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.nav_box.add_css_class('linked')
 
         self.prev_button = Gtk.Button(icon_name='go-up-symbolic')
         self.prev_button.set_can_focus(False)
@@ -82,11 +81,6 @@ class SymbolsPageView(Gtk.Box):
         self.search_entry = SearchEntry()
         self.search_entry.set_hexpand(True)
         self.search_box.append(self.search_entry)
-
-        self.search_close_button = Gtk.Button(icon_name='window-close-symbolic')
-        self.search_close_button.add_css_class('flat')
-        self.search_close_button.set_can_focus(False)
-        self.search_box.append(self.search_close_button)
 
         self.search_revealer.set_child(self.search_box)
 
@@ -131,6 +125,7 @@ class SymbolsPageView(Gtk.Box):
     def add_category(self, title, flowbox):
         group = Adw.PreferencesGroup()
         group.set_title(title)
+        group.add_css_class('boxed-list')
         group.add(flowbox)
         self.page.add(group)
         self.labels.append(group)

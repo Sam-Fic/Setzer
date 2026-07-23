@@ -63,20 +63,9 @@ class FontManager():
         return char_width
 
     def get_line_height(text_view):
-        count_iter = text_view.get_buffer().get_start_iter()
-        offset_before = 0
-        count = 1
-        while True:
-            offset_before = count_iter.get_offset()
-            text_view.forward_display_line(count_iter)
-            count += 1
-            if count_iter.get_offset() == offset_before and offset_before != 0:
-                count -= 2
-                break
-            if count_iter.get_offset() == offset_before or count_iter.get_line() != 0:
-                count -= 1
-                break
-        return text_view.get_line_yrange(text_view.get_buffer().get_start_iter()).height / count
+        context = text_view.get_pango_context()
+        metrics = context.get_metrics()
+        return (metrics.get_ascent() + metrics.get_descent()) / Pango.SCALE
 
     def get_font_desc():
         return Pango.FontDescription.from_string(FontManager.font_string)

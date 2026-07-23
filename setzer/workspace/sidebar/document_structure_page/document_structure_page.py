@@ -53,6 +53,7 @@ class DocumentStructurePage(Gtk.Box):
         group = Adw.PreferencesGroup()
         group.set_title(title)
         group.add_css_class('sidebar-section-group')
+        group.add_css_class('boxed-list')
         group.add(widget)
         self.page.add(group)
         self.sections[name] = group
@@ -81,7 +82,6 @@ class DocumentStructurePage(Gtk.Box):
         self.toolbar.append(self.section_label)
 
         self.nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
-        self.nav_box.add_css_class('linked')
 
         self.prev_button = Gtk.Button()
         self.prev_button.set_icon_name('go-up-symbolic')
@@ -104,13 +104,12 @@ class DocumentStructurePage(Gtk.Box):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
         self.prev_button.set_sensitive(scrolling_offset != 0)
 
-        # 一次取 visible sections，复用给按钮敏感度 + section label（原实现调用 2 次）
+        # 一次取 visible sections，复用给按钮敏感度 + section label
         visible_sections = self.get_visible_sections()
-        label_offsets = [y for (title, y) in visible_sections]
 
-        height_condition = scrolling_offset < self.page.get_allocated_height() - self.scrolled_window.get_allocated_height()
-        label_condition = len(label_offsets) > 0 and scrolling_offset < label_offsets[-1]
-        self.next_button.set_sensitive(height_condition and label_condition)
+        at_bottom = scrolling_offset >= self.page.get_allocated_height() - self.scrolled_window.get_allocated_height()
+        has_next = len(visible_sections) > 0 and scrolling_offset < visible_sections[-1][1]
+        self.next_button.set_sensitive(not at_bottom and has_next)
 
         # section title：仅变化时 set_text，避免每帧触发 Gtk.Label 无谓重绘
         current_title = self._compute_current_title(visible_sections)
@@ -119,16 +118,14 @@ class DocumentStructurePage(Gtk.Box):
             self.section_label.set_text(current_title)
 
     def get_visible_sections(self):
-        """返回 [(title, viewport_y), ...]，仅含当前可见的 group，按显示顺序。"""
-        vadj = self.scrolled_window.get_vadjustment()
-        scrolling_offset = vadj.get_value()
+        """返回 [(title, absolute_y), ...]，含所有 visible group 的内容绝对 Y 坐标。"""
         result = list()
         groups = self.get_page_groups()
         for i, group in enumerate(groups):
             if not group.get_visible():
                 continue
             title = self.section_titles[i] if i < len(self.section_titles) else group.get_title()
-            y = group.get_allocation().y - scrolling_offset
+            y = group.get_allocation().y
             result.append((title, y))
         return result
 
@@ -138,13 +135,14 @@ class DocumentStructurePage(Gtk.Box):
     def _compute_current_title(self, sections):
         '''返回当前滚动到视口顶部的分区标题；视口顶部位于第一段之前时返回首段标题。
 
-        接收已取的 visible_sections，避免重复调用 get_visible_sections。
+        接收已取的 visible_sections（绝对 Y），避免重复调用 get_visible_sections。
         '''
         if len(sections) == 0:
             return ''
+        scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
         current = sections[0][0]
         for title, y in sections:
-            if y <= 1:
+            if y <= scrolling_offset + 1:
                 current = title
             else:
                 break

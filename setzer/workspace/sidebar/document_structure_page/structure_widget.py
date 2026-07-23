@@ -101,5 +101,5 @@ class StructureWidget(Gtk.Box):
         row.set_activatable(True)
         row.add_prefix(Gtk.Image(icon_name=icon_name))
         row.set_title(text)
-        row.set_margin_start(9 + indent)
+        row.set_margin_start(indent)
         return row
