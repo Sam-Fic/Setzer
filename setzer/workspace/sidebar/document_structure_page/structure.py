@@ -30,6 +30,17 @@ class StructureSection(object):
 
         self.levels = {'part': 0, 'chapter': 1, 'section': 2, 'subsection': 3, 'subsubsection': 4, 'paragraph': 5, 'subparagraph': 6, 'file': 7}
 
+        self.icon_map = {
+            'part': 'view-list-symbolic',
+            'chapter': 'x-office-document-symbolic',
+            'section': 'folder-symbolic',
+            'subsection': 'text-x-generic-symbolic',
+            'subsubsection': 'accessories-text-editor-symbolic',
+            'paragraph': 'format-justify-left-symbolic',
+            'subparagraph': 'format-justify-fill-symbolic',
+            'file': 'file-symbolic',
+        }
+
         self.view = structure_section_view.StructureSectionView(self)
 
         self.nodes = list()
@@ -96,7 +107,7 @@ class StructureSection(object):
         for section in sections.values():
             section_type = section['block'][4]
             level = self.levels[section_type]
-            node = {'item': [section['document'], section['starting_line'], section_type + '-symbolic', ' '.join(section['block'][5].splitlines())], 'children': list()}
+            node = {'item': [section['document'], section['starting_line'], self.icon_map.get(section_type, 'symbolic'), ' '.join(section['block'][5].splitlines())], 'children': list()}
             if predecessor[level] == None:
                 nodes.append(node)
             else:

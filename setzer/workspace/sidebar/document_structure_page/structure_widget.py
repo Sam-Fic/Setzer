@@ -41,7 +41,9 @@ class StructureWidget(Gtk.Box):
         self.list_box.set_selection_mode(Gtk.SelectionMode.NONE)
         self.list_box.set_activate_on_single_click(True)
         self.list_box.set_can_focus(False)
+        self.list_box.set_hexpand(True)
         self.list_box.add_css_class('compact-rows')
+        self.list_box.add_css_class('boxed-list')
         self.list_box.connect('row-activated', self.on_row_activated)
         Gtk.Box.append(self, self.list_box)
 
@@ -99,7 +101,11 @@ class StructureWidget(Gtk.Box):
         row = Adw.ActionRow()
         row.set_selectable(False)
         row.set_activatable(True)
+        if indent > 0:
+            spaces = '\u00A0' * (indent // 6)
+            prefix_label = Gtk.Label(label=spaces)
+            prefix_label.set_xalign(1.0)
+            row.add_prefix(prefix_label)
         row.add_prefix(Gtk.Image(icon_name=icon_name))
         row.set_title(text)
-        row.set_margin_start(indent)
         return row

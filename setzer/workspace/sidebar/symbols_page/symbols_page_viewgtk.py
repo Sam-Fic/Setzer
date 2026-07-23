@@ -125,7 +125,6 @@ class SymbolsPageView(Gtk.Box):
     def add_category(self, title, flowbox):
         group = Adw.PreferencesGroup()
         group.set_title(title)
-        group.add_css_class('boxed-list')
         group.add(flowbox)
         self.page.add(group)
         self.labels.append(group)

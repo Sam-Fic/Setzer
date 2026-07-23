@@ -91,10 +91,6 @@ textview gutter {
 }
 
 /*
- * 列表容器圆角：boxed-list 提供 libadwaita 标准卡片外观（圆角 + 行间分隔线）。
- */
-
-/*
  * 空状态占位：现代、低调，避免空分区显得空洞。
  */
 .sidebar-empty-state {
@@ -115,4 +111,54 @@ textview gutter {
 .sidebar-file-row .subtitle {
     font-size: 0.8em;
     opacity: 0.6;
+}
+
+/*
+ * 预览区去描边：GTK/Libadwaita 的 Gtk.ScrolledWindow / Gtk.Viewport 默认
+ * 会给可滚动内容区绘制一圈边缘描边（border / box-shadow），在明暗主题下
+ * 表现为 PDF 预览外侧“一圈框”。这里统一去除预览区各级容器的边框与阴影，
+ * 让 PDF 画布直接铺满，不再有包裹式描边。
+ */
+.preview scrolledwindow,
+.preview viewport,
+.preview drawingarea,
+.preview scrolledwindow > viewport {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    background-image: none;
+}
+
+/*
+ * 预览面板最外缘描边：来自两处 Libadwaita 原生分隔线——
+ *   (1) Gtk.Paned 的 wide_handle 分隔条（编辑器与预览之间）带 border/阴影；
+ *   (2) 预览底部 Gtk.ActionBar 顶缘的 inset 分隔线。
+ * 两者在明暗主题下都表现为“预览区被一圈线包住”。统一去除。
+ */
+paned > separator {
+    border: none;
+    box-shadow: none;
+    background: transparent;
+    background-image: none;
+}
+.preview actionbar {
+    border: none;
+    box-shadow: none;
+}
+
+/*
+ * 预览面板顶部横线：标题栏（ToolbarView 的 .top-bar）与内容区之间的分隔线。
+ * Libadwaita 中该线来自 .top-bar 容器的 box-shadow（横贯窗口顶部、明暗都有，
+ * 正好在预览/编辑器正上方）。注意：
+ *   1. ToolbarView 的顶栏容器类名是 .top-bar（非 .toolbar）；
+ *   2. GTK4 的 CSS 解析器不支持 !important，必须用普通声明 + 足够特异性。
+ */
+toolbarview > .top-bar,
+.top-bar,
+headerbar {
+    box-shadow: none;
+}
+.preview stack {
+    border: none;
+    box-shadow: none;
 }

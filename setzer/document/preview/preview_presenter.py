@@ -112,8 +112,14 @@ class PreviewPresenter(object):
             ctx.transform(cairo.Matrix(1, 0, 0, 1, 0, page_height + self.preview.layout.page_gap))
 
     def draw_background(self, ctx, drawing_area):
+        # 画布底色跟随 PDF 页面底色（recolor 用 view_bg，否则纯白），
+        # 让页面与画布无缝融合，消除页面边缘的“描边框”观感。
+        if self.preview.recolor_pdf:
+            bg = ColorManager.get_ui_color('view_bg_color')
+        else:
+            bg = Gdk.RGBA(1, 1, 1, 1)
         ctx.rectangle(0, 0, drawing_area.get_allocated_width(), drawing_area.get_allocated_height())
-        Gdk.cairo_set_source_rgba(ctx, ColorManager.get_ui_color('window_bg_color'))
+        Gdk.cairo_set_source_rgba(ctx, bg)
         ctx.fill()
 
     #@timer
