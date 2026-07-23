@@ -17,7 +17,7 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import GObject, Gdk
+from gi.repository import GObject, Gdk, GLib
 import cairo
 
 import _thread as thread, queue
@@ -55,8 +55,13 @@ class PreviewPageRenderer(Observable):
         self.render_queue = queue.Queue()
         self.render_queue_low_priority = queue.Queue()
         self.rendered_pages_queue = queue.Queue()
-        thread.start_new_thread(self.render_page_loop, ())
-        GObject.timeout_add(50, self.rendered_pages_loop)
+
+        # 惰性启动：后台渲染线程与 50ms 轮询定时器推迟到首次 activate() 才创建。
+        # 原实现在 __init__ 立即启动，导致每新建一个 LaTeX 文档（即便尚无 PDF、
+        # 预览不可见）就常驻一个线程 + 一个 50ms 定时器，且文档关闭后不释放。
+        self._render_thread_started = False
+        self._rendered_pages_timeout_id = None
+        self._shutting_down = False
 
     def on_layout_or_position_changed(self, notifying_object):
         if self.preview.layout != None:
@@ -76,7 +81,17 @@ class PreviewPageRenderer(Observable):
     def activate(self):
         with self.is_active_lock:
             self.is_active = True
+        self._ensure_loops_started()
         self.update_rendered_pages()
+
+    def _ensure_loops_started(self):
+        # 首次激活时才启动后台线程与轮询定时器，避免对从不显示预览的文档
+        # （如新建未保存的空文档）也常驻线程/定时器。
+        if not self._render_thread_started:
+            self._render_thread_started = True
+            thread.start_new_thread(self.render_page_loop, ())
+        if self._rendered_pages_timeout_id is None:
+            self._rendered_pages_timeout_id = GObject.timeout_add(50, self.rendered_pages_loop)
 
     def deactivate(self):
         with self.is_active_lock:
@@ -86,6 +101,20 @@ class PreviewPageRenderer(Observable):
             self.visible_pages = list()
         self.page_width = None
         self.pdf_date = None
+
+    def shutdown(self):
+        '''文档关闭时由 workspace.remove_document 调用：移除轮询定时器并
+        置 is_active=False。后台线程检测到 is_active=False 后会进入
+        time.sleep(0.05) 空转，不再占 CPU；其随进程退出自然结束。'''
+        self._shutting_down = True
+        if self._rendered_pages_timeout_id is not None:
+            GLib.Source.remove(self._rendered_pages_timeout_id)
+            self._rendered_pages_timeout_id = None
+        with self.is_active_lock:
+            self.is_active = False
+        self.rendered_pages = dict()
+        with self.visible_pages_lock:
+            self.visible_pages = list()
 
     def render_page_loop(self):
         while True:

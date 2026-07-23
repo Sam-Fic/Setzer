@@ -104,7 +104,6 @@ class ContextMenuView(Gtk.PopoverMenu):
         self.reset_zoom_button = Gtk.Button.new_with_label('100%')
         self.reset_zoom_button.set_has_frame(False)
         self.reset_zoom_button.set_action_name('win.reset-zoom')
-        self.reset_zoom_button.set_size_request(53, -1)
         inner_box.append(self.reset_zoom_button)
 
         button_zoom_in = Gtk.Button()

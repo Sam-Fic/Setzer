@@ -17,7 +17,7 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import GObject
+from gi.repository import GObject, GLib
 
 import os.path
 import subprocess
@@ -42,10 +42,18 @@ class DocumentStats(object):
         self.values_lock = thread.allocate_lock()
         self.texcount_missing = False
 
+        # 签名缓存：update_view 每 200ms（现 2000ms）被定时器调用一次，
+        # 若值未变则跳过 set_markup（Pango 重新解析+重排相当昂贵）。
+        self._last_whole_markup = None
+        self._last_whole_visible = None
+        self._last_current_markup = None
+
         self.workspace.connect('new_active_document', self.on_new_active_document)
         self.workspace.connect('root_state_change', self.on_root_state_change)
 
-        GObject.timeout_add(200, self.update_view)
+        # update_view 放宽到 2000ms 仅作兜底；run_query 完成后会通过
+        # GLib.idle_add 立即触发一次刷新，所以显示延迟几乎为零。
+        GObject.timeout_add(2000, self.update_view)
         GObject.timeout_add(1000, self.update_data)
 
     def on_new_active_document(self, workspace, document):
@@ -105,6 +113,7 @@ class DocumentStats(object):
             with self.values_lock:
                 self.texcount_missing = True
                 self.values[filename]['counts'] = None
+            GLib.idle_add(self.update_view)
             return
         process.wait()
 
@@ -115,6 +124,8 @@ class DocumentStats(object):
             count_2 = raw_result[2].split(' ')[0]
             self.values[filename]['counts'] = [count_0, count_1, count_2]
             self.texcount_missing = False
+        # 后台线程拿到新值后立即触发主线程刷新，无需等 2000ms 兜底轮询。
+        GLib.idle_add(self.update_view)
 
     #@timer
     def update_view(self):
@@ -148,10 +159,18 @@ class DocumentStats(object):
             markup += '</b> words in headers and <b>'
             markup += str(values[2])
             markup += '</b> words outside text (captions, ...).'
-            self.view.label_whole_document.set_markup(markup)
-            self.view.label_whole_document.set_visible(True)
+            # 签名短路：markup 未变 + 已可见时跳过 set_markup/set_visible，
+            # 避免每 2000ms 触发一次 Pango 重排。
+            if not self._last_whole_visible or markup != self._last_whole_markup:
+                self._last_whole_markup = markup
+                self._last_whole_visible = True
+                self.view.label_whole_document.set_markup(markup)
+                self.view.label_whole_document.set_visible(True)
         else:
-            self.view.label_whole_document.set_visible(False)
+            if self._last_whole_visible:
+                self._last_whole_visible = False
+                self._last_whole_markup = None
+                self.view.label_whole_document.set_visible(False)
 
         document = self.workspace.get_active_document()
         if document == None: return True
@@ -173,7 +192,9 @@ class DocumentStats(object):
         markup += '</b> words in headers and <b>'
         markup += values[2]
         markup += '</b> words outside text (captions, ...).'
-        self.view.label_current_file.set_markup(markup)
+        if markup != self._last_current_markup:
+            self._last_current_markup = markup
+            self.view.label_current_file.set_markup(markup)
 
         return True
 

@@ -41,10 +41,30 @@ class StructureWidget(Gtk.ListBox):
         self.set_can_focus(False)
         self.connect('row-activated', self.on_row_activated)
 
+        # 签名短路：populate() 调用 populate_if_changed(signature)，若签名与
+        # 上次相同则跳过 clear_rows + 重建。按键在正文（不涉及 \section /
+        # \label / \todo / \input）时，四个 section 的数据完全不变，签名命中，
+        # 0 个 row 变动——这是打字卡顿的主要消除点。
+        # 签名中包含 id(document)，确保文档切换时即便两文档结构恰好相同也强制重建。
+        self._last_signature = None
+
     def on_row_activated(self, listbox, row):
         self.model.on_row_activated(row)
 
+    def populate_if_changed(self, signature):
+        '''若 signature 与上次 populate 时相同，返回 False（调用方应跳过重建）；
+        否则记录并返回 True（调用方继续重建）。首次调用必返回 True。'''
+        if signature == self._last_signature:
+            return False
+        self._last_signature = signature
+        return True
+
+    def invalidate_signature(self):
+        '''强制下次 populate 重建（用于文档切换等需要无条件刷新的场景）。'''
+        self._last_signature = None
+
     def clear_rows(self):
+        self._last_signature = None
         child = self.get_first_child()
         while child is not None:
             sibling = child.get_next_sibling()

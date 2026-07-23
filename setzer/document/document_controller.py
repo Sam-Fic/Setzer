@@ -37,7 +37,9 @@ class DocumentController(object):
         self.changed_on_disk_dialog_shown_after_last_change = False
         self.continue_save_date_loop = True
         self.zoom_threshold = 0
-        GObject.timeout_add(500, self.save_date_loop)
+        # 保存 timeout id 以便文档关闭时移除。原实现仅置 continue_save_date_loop=False，
+        # 定时器仍会再触发一次（500ms 内）才退出；直接 remove 更及时。
+        self._save_date_loop_timeout_id = GObject.timeout_add(500, self.save_date_loop)
 
         self.primary_click_controller = Gtk.GestureClick()
         self.primary_click_controller.set_button(1)
@@ -62,6 +64,13 @@ class DocumentController(object):
         key_controller.connect('key-pressed', self.on_keypress)
         key_controller.set_propagation_phase(Gtk.PropagationPhase.CAPTURE)
         self.document.view.source_view.add_controller(key_controller)
+
+    def shutdown(self):
+        '''文档关闭时由 workspace.remove_document 调用，移除 500ms 轮询定时器。'''
+        self.continue_save_date_loop = False
+        if self._save_date_loop_timeout_id is not None:
+            GLib.Source.remove(self._save_date_loop_timeout_id)
+            self._save_date_loop_timeout_id = None
 
     def on_primary_buttonpress(self, controller, n_press, x, y):
         modifiers = Gtk.accelerator_get_default_mod_mask()

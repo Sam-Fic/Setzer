@@ -17,7 +17,7 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gdk
+from gi.repository import Gtk, Gdk, GLib
 
 from setzer.app.service_locator import ServiceLocator
 
@@ -37,6 +37,9 @@ class BracketCompletion(object):
         self.document.view.source_view.add_controller(key_controller)
 
         self.completion_marks = list()
+        # idle 去抖：on_buffer_changed 和 on_cursor_position_changed 单次按键
+        # 两路都触发，去抖后只跑一次 reconsider_completion_marks。
+        self._reconsider_idle_id = None
         self.document.connect('cursor_position_changed', self.on_cursor_position_changed)
         self.document.connect('changed', self.on_buffer_changed)
         self.document.settings.connect('settings_changed', self.on_settings_changed)
@@ -86,10 +89,21 @@ class BracketCompletion(object):
         return False
 
     def on_cursor_position_changed(self, document):
-        self.reconsider_completion_marks()
+        self._schedule_reconsider()
 
     def on_buffer_changed(self, document):
+        self._schedule_reconsider()
+
+    def _schedule_reconsider(self):
+        '''单次按键触发 on_buffer_changed + on_cursor_position_changed 两路，
+        去抖后只跑一次 reconsider_completion_marks。'''
+        if self._reconsider_idle_id is None:
+            self._reconsider_idle_id = GLib.idle_add(self._reconsider_idle)
+
+    def _reconsider_idle(self):
+        self._reconsider_idle_id = None
         self.reconsider_completion_marks()
+        return False
 
     def bracket_selection(self, char):
         if not self.bracket_selection_enabled: return False

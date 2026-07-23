@@ -37,14 +37,14 @@ class DocumentStatsView(Gtk.Box):
         self.label_whole_document.set_wrap(True)
         self.label_whole_document.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
         self.label_whole_document.set_xalign(0)
-        self.label_whole_document.set_margin_top(10)
+        self.label_whole_document.set_margin_top(12)
         self.append(self.label_whole_document)
 
         self.label_current_file = Gtk.Label()
         self.label_current_file.set_wrap(True)
         self.label_current_file.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
         self.label_current_file.set_xalign(0)
-        self.label_current_file.set_margin_top(10)
+        self.label_current_file.set_margin_top(12)
         self.append(self.label_current_file)
 
 

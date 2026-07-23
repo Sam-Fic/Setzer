@@ -26,9 +26,19 @@ class FilesSectionView(structure_widget.StructureWidget):
         structure_widget.StructureWidget.__init__(self, model)
 
     def populate(self):
+        # 签名 = id(document) + 主文件名 + 各 include 文件名元组。
+        # 按键不动 \input/\include 时签名命中，跳过重建。
+        doc = self.model.data_provider.document
+        signature = (
+            id(doc),
+            doc.get_displayname(),
+            tuple(include['filename'] for include in self.model.includes),
+        )
+        if not self.populate_if_changed(signature):
+            return
         self.clear_rows()
 
-        row = self.make_row('file-symbolic', os.path.basename(self.model.data_provider.document.get_displayname()), 0)
+        row = self.make_row('file-symbolic', os.path.basename(doc.get_displayname()), 0)
         row.item_data = ('main', None)
         self.append(row)
 

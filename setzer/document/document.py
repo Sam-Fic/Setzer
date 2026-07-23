@@ -19,7 +19,7 @@ import gi
 gi.require_version('GtkSource', '5')
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import GtkSource, Gtk, GObject, Adw
+from gi.repository import GtkSource, Gtk, GObject, Adw, GLib
 
 import os.path, time
 
@@ -75,14 +75,35 @@ class Document(Observable):
         self.code_folding = code_folding.CodeFolding(self)
         self.gutter = gutter.Gutter(self, self.view)
         self.search = search.Search(self, self.view)
-        if self.is_latex_document(): self.update_matching_blocks = update_matching_blocks.UpdateMatchingBlocks(self)
-        if self.is_latex_document(): self.bracket_completion = bracket_completion.BracketCompletion(self)
-        if self.is_latex_document(): self.autocomplete = autocomplete.Autocomplete(self)
+        # LaTeX 专属子系统（autocomplete / bracket_completion /
+        # update_matching_blocks）延迟到 idle 构造，避免新建文档时主线程
+        # 阻塞。它们只在用户按键交互时才需要，idle 调度时文档已可见可编辑。
+        self._latex_features_ready = False
+        if self.is_latex_document():
+            GLib.idle_add(self._init_latex_features)
 
         self.settings.connect('settings_changed', self.on_settings_changed)
 
         self.style_manager = Adw.StyleManager.get_default()
         self.style_manager.connect('notify::dark', self.on_theme_colors_changed)
+
+    def _init_latex_features(self):
+        '''延迟构造 LaTeX 专属子系统（autocomplete / bracket_completion /
+        update_matching_blocks）。它们只在用户按键交互时才需要，idle 调度
+        时文档已可见可编辑，从而把构造开销从「新建文档」主帧移到空闲时刻。'''
+        self.update_matching_blocks = update_matching_blocks.UpdateMatchingBlocks(self)
+        self.bracket_completion = bracket_completion.BracketCompletion(self)
+        self.autocomplete = autocomplete.Autocomplete(self)
+        self._latex_features_ready = True
+
+        # on_new_active_document 在 idle 之前就已执行，当时 autocomplete
+        # 尚未构造，overlay 挂载被 try/except 跳过。此处补做。
+        workspace = ServiceLocator.get_workspace()
+        if workspace is not None and workspace.active_document is self:
+            main_window = ServiceLocator.get_main_window()
+            try: main_window.preview_paned_overlay.add_overlay(self.autocomplete.widget.view)
+            except AttributeError: pass
+        return False
 
     def on_settings_changed(self, settings, parameter):
         section, item, value = parameter
@@ -322,7 +343,9 @@ class Document(Observable):
 
     def on_change(self, buffer):
         self.add_change_code('changed')
-        self.scroll_cursor_onscreen(margin_lines=0)
+        # 不在此调用 scroll_cursor_onscreen：文本插入/删除必然伴随光标移动，
+        # notify::cursor-position 会触发 on_cursor_position_change 完成滚动。
+        # 原实现两处各调一次，快速打字时双倍 set_kinetic_scrolling + scroll_to_mark。
 
     def on_cursor_position_change(self, buffer, location):
         self.add_change_code('cursor_position_changed')

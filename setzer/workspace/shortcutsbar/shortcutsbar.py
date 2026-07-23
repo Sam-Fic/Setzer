@@ -39,32 +39,31 @@ class Shortcutsbar(object):
         self.workspace.connect('show_build_log_state_change', self.update_buttons)
         self.workspace.connect('root_state_change', self.on_root_state_change)
 
+        # 不再监听 build_log_paned 的 'width-changed'：_WidthReportingPaned 已停止
+        # emit（见 workspace_viewgtk.py），且其回调仅做 update_wizard_button，
+        # 该工作由 on_new_active_document 覆盖（is_latex_document() 在文档
+        # 生命周期内不变，无需每次按键触发）。
         self.build_log_paned = ServiceLocator.get_main_window().build_log_paned
-        self.width = 0
-        self.build_log_paned.connect('width-changed', self.on_paned_width_changed)
 
         self.document = self.workspace.active_document
         if self.document != None:
-            self.document.connect('changed', self.on_document_changed)
             self.document.search.connect('mode_changed', self.update_buttons)
             self.update_wizard_button()
 
     def on_document_removed(self, workspace=None, parameter=None):
         if self.workspace.active_document == None:
-            self.document.disconnect('changed', self.update_buttons)
-            self.document.search.disconnect('mode_changed', self.update_buttons)
+            if self.document != None:
+                self.document.search.disconnect('mode_changed', self.update_buttons)
             self.document = None
 
         self.update_buttons()
 
     def on_new_active_document(self, workspace=None, parameter=None):
         if self.document != None:
-            self.document.disconnect('changed', self.on_document_changed)
             self.document.search.disconnect('mode_changed', self.update_buttons)
 
         self.document = self.workspace.active_document
         if self.document != None:
-            self.document.connect('changed', self.on_document_changed)
             self.document.search.connect('mode_changed', self.update_buttons)
             self.update_wizard_button()
 
@@ -73,24 +72,12 @@ class Shortcutsbar(object):
     def on_root_state_change(self, workspace, state):
         self.update_buttons()
 
-    def on_paned_width_changed(self, widget):
-        # 用 shortcutsbar 自身的分配宽度（而非 build_log_paned 的），保持与
-        # do_size_allocate / request_reflow 一致——后者用的是 shortcutsbar 的
-        # content 宽度（已扣除 margins）。若混用两个宽度（差 12px = 6+6 margins），
-        # reflow 会在 target 2↔3 之间震荡（一个按钮反复进出 overflow）。
-        self.width = self.view.get_allocated_width()
-        # 不直接调 reflow_for_width：do_size_allocate 已经在宽度变化时触发了
-        # reflow。这里只需更新 wizard 按钮可见性（依赖 self.width），
-        # update_wizard_button 末尾会调 request_reflow 处理内容驱动的 reflow。
-        self.update_wizard_button(animate=False)
-
-    def on_document_changed(self, workspace=None, parameter=None):
-        self.update_wizard_button(animate=True)
-
     def update_wizard_button(self, animate=False):
         if self.document == None: return
 
         # 与其他 latex 按钮一致：latex 文档时常驻显示，纯图标。
+        # is_latex_document() 在文档生命周期内不变，因此只在文档切换时
+        # 调用即可（on_new_active_document / __init__），无需每次按键触发。
         self.view.wizard_button.set_visible(self.document.is_latex_document())
 
 

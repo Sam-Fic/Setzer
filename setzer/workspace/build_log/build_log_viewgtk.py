@@ -64,12 +64,13 @@ class BuildLogView(Gtk.Box):
         self.close_button.set_action_name('win.close-build-log')
 
         self.header_label = Gtk.Label()
-        self.header_label.set_size_request(300, -1)
         self.header_label.set_xalign(0)
-        self.header_label.set_margin_start(0)
+        self.header_label.set_valign(Gtk.Align.CENTER)
         self.header_label.set_hexpand(True)
 
         self.header = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.header.set_margin_start(12)
+        self.header.set_margin_end(12)
         self.header.append(self.header_label)
         self.header.append(self.close_button)
 

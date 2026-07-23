@@ -24,6 +24,11 @@ class LabelsSectionView(structure_widget.StructureWidget):
         structure_widget.StructureWidget.__init__(self, model)
 
     def populate(self):
+        # 签名 = id(document) + 全部 label 名称元组。按键不动 \label 时签名命中。
+        doc = self.model.data_provider.document
+        signature = (id(doc), tuple(label[0] for label in self.model.labels))
+        if not self.populate_if_changed(signature):
+            return
         self.clear_rows()
         for label in self.model.labels:
             row = self.make_row('tag-symbolic', label[0], 0)

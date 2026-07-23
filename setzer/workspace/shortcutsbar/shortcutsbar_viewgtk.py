@@ -82,15 +82,16 @@ class Shortcutsbar(Gtk.Box):
         # 容器留白，强化"悬浮一排按钮"的视觉归属（无底板横条）
         self.set_margin_top(6)
         self.set_margin_bottom(6)
-        self.set_margin_start(6)
-        self.set_margin_end(6)
+        self._margin_horizontal = 6
+        self.set_margin_start(self._margin_horizontal)
+        self.set_margin_end(self._margin_horizontal)
 
         self.current_popover = None # popover being processed
         self.current_page = 'main' # page being processed
 
         # 可见 left 按钮容器（普通 Gtk.Box，不是 FlowBox——避免 FlowBox
-        # 内部布局对 children 拉伸/换行的副作用）。hide 时直接从 left_box
-        # remove 并加入 overflow listbox。
+        # 内部布局对 children 拉伸/换行的副作用）。收起时从 left_box
+        # remove 并加入 overflow menu model。
         self.left_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.left_box.set_spacing(6)
         self.left_box.set_can_focus(False)
@@ -104,25 +105,23 @@ class Shortcutsbar(Gtk.Box):
         self._spacer = Gtk.Box()
         self._spacer.set_hexpand(True)
 
-        # Overflow button (三点) + popover (ListBox of overflowed buttons)
+        # Overflow button (三点) + popover (native Gtk.PopoverMenu via Gio.Menu)
         # 位置：紧跟 left_box（左半边按钮组的最右端）——因为收起的是左侧按钮，
         # 三点按钮应出现在左侧按钮群的末尾，而非整条工具栏的最右。
         self.overflow_button = Gtk.MenuButton()
         self.overflow_button.set_icon_name('view-more-symbolic')
         self.overflow_button.set_tooltip_text(_('More'))
         self.overflow_button.set_visible(False)  # 宽时隐藏
-        # 与 left_box 最后一个按钮保持 6px 间距（与 left_box 内部 spacing 一致）
         self.overflow_button.set_margin_start(6)
 
-        overflow_popover = Gtk.Popover()
-        self.overflow_listbox = Gtk.ListBox()
-        self.overflow_listbox.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.overflow_listbox.set_show_separators(False)
-        # 让 listbox 有合理的 padding（default listbox 有 0 margin）
-        self.overflow_listbox.set_margin_top(6)
-        self.overflow_listbox.set_margin_bottom(6)
-        overflow_popover.set_child(self.overflow_listbox)
-        self.overflow_button.set_popover(overflow_popover)
+        self._overflow_model = Gio.Menu()
+        self.overflow_button.set_menu_model(self._overflow_model)
+        overflow_popover = self.overflow_button.get_popover()
+        if overflow_popover is not None:
+            overflow_popover.add_css_class('menu')
+
+        # 按钮元信息：icon_name, tooltip, menu_model (仅 MenuButton 有)
+        self._button_meta = {}
 
         # 组装：left | overflow | spacer(hexpand) | right
         # overflow 紧跟 left_box；spacer 把 right_box 推到最右端。
@@ -187,8 +186,8 @@ class Shortcutsbar(Gtk.Box):
 
     def reflow_for_width(self, available_width):
         '''Compute how many left buttons fit in available_width and hide
-        the rest into the overflow popover. Called by both do_size_allocate
-        and the presenter's width-changed handler.
+        the rest into the overflow popover. Called by do_size_allocate
+        (primary path) and the _poll_sb_width safety net.
 
         算法：测量每个 left button 的自然宽，累加得 left_total。测量 right 4 按钮
         和 overflow 按钮的自然宽。avail = available_width - right_total - margins
@@ -231,7 +230,7 @@ class Shortcutsbar(Gtk.Box):
         right_total = sum(right_widths) + spacing * max(0, n_right - 1)
         # 始终预留 overflow 按钮空间（即使当前 target=0），避免 feedback loop
         # 当 target=0 时 overflow 按钮隐藏，下次 reflow 不会因它消失而扩张
-        fixed = right_total + 12 + overflow_nat + spacing  # margins + overflow
+        fixed = right_total + 2 * self._margin_horizontal + overflow_nat + spacing  # margins + overflow
 
         avail = available_width - fixed
 
@@ -260,7 +259,7 @@ class Shortcutsbar(Gtk.Box):
         n = max(0, min(n, len(self.left_buttons)))
         if n == self._overflow_count:
             return
-        # 先把当前在 overflow listbox 里的所有 button 还原到 left_box
+        # 先把当前在 overflow 的所有 button 还原到 left_box
         for btn in self.left_buttons:
             if btn.get_parent() is not self.left_box:
                 self.left_box.append(btn)
@@ -270,25 +269,34 @@ class Shortcutsbar(Gtk.Box):
         if n > 0:
             for btn in self.left_buttons[-n:]:
                 self.left_box.remove(btn)
-        # 重建 overflow listbox
+        # 重建 overflow menu model
         self._refresh_overflow_list(n)
         self._overflow_count = n
         # 0 时隐藏 overflow button，否则显示
         self.overflow_button.set_visible(n > 0)
 
     def _refresh_overflow_list(self, n):
-        # 清空
-        while True:
-            row = self.overflow_listbox.get_row_at_index(0)
-            if row is None:
-                break
-            self.overflow_listbox.remove(row)
+        self._overflow_model.remove_all()
         if n == 0:
             return
-        # 为每个 hidden button 创建一个 ListBoxRow（含 icon + label）
         for btn in self.left_buttons[-n:]:
-            row = _OverflowRow(btn)
-            self.overflow_listbox.append(row)
+            meta = self._button_meta.get(id(btn))
+            if meta is None:
+                continue
+            icon_name = meta['icon_name']
+            tooltip = meta['tooltip']
+            label = tooltip.split(' (', 1)[0]
+            menu_model = meta.get('menu_model')
+            if menu_model is not None:
+                self._overflow_model.append_submenu(label, menu_model)
+            else:
+                item = Gio.MenuItem.new(label, meta.get('action_name'))
+                target = meta.get('action_target')
+                if target is not None:
+                    item.set_action_and_target_value(meta['action_name'], target)
+                if icon_name:
+                    item.set_icon(Gio.ThemedIcon.new(icon_name))
+                self._overflow_model.append_item(item)
 
     # ------- left button construction helpers -------
 
@@ -303,6 +311,13 @@ class Shortcutsbar(Gtk.Box):
         self.wizard_button.set_tooltip_text(_('Create a template document'))
         self.wizard_button.set_can_focus(False)
         self.wizard_button.set_action_name('win.show-document-wizard')
+        self._button_meta[id(self.wizard_button)] = {
+            'icon_name': 'document-new-symbolic',
+            'tooltip': _('Create a template document'),
+            'menu_model': None,
+            'action_name': 'win.show-document-wizard',
+            'action_target': None,
+        }
 
         self._add_left_button(self.wizard_button)
 
@@ -361,6 +376,13 @@ class Shortcutsbar(Gtk.Box):
         self.bold_button.set_action_name('win.insert-before-after')
         self.bold_button.set_action_target_value(GLib.Variant('as', ['\\textbf{', '}']))
         self.bold_button.set_tooltip_text(_('Bold') + ' (' + _('Ctrl') + '+B)')
+        self._button_meta[id(self.bold_button)] = {
+            'icon_name': 'format-text-bold-symbolic',
+            'tooltip': _('Bold') + ' (' + _('Ctrl') + '+B)',
+            'menu_model': None,
+            'action_name': 'win.insert-before-after',
+            'action_target': GLib.Variant('as', ['\\textbf{', '}']),
+        }
         self._add_left_button(self.bold_button)
 
     def insert_italic_button(self):
@@ -369,6 +391,13 @@ class Shortcutsbar(Gtk.Box):
         self.italic_button.set_action_name('win.insert-before-after')
         self.italic_button.set_action_target_value(GLib.Variant('as', ['\\textit{', '}']))
         self.italic_button.set_tooltip_text(_('Italic') + ' (' + _('Ctrl') + '+I)')
+        self._button_meta[id(self.italic_button)] = {
+            'icon_name': 'format-text-italic-symbolic',
+            'tooltip': _('Italic') + ' (' + _('Ctrl') + '+I)',
+            'menu_model': None,
+            'action_name': 'win.insert-before-after',
+            'action_target': GLib.Variant('as', ['\\textit{', '}']),
+        }
         self._add_left_button(self.italic_button)
 
     # ------- right button construction helpers -------
@@ -410,65 +439,10 @@ class Shortcutsbar(Gtk.Box):
         popover = button.get_popover()
         if popover is not None:
             popover.add_css_class('menu')
+        self._button_meta[id(button)] = {
+            'icon_name': button.get_icon_name(),
+            'tooltip': button.get_tooltip_text() or '',
+            'menu_model': menu_builder.model,
+        }
 
 
-class _OverflowRow(Gtk.ListBoxRow):
-    '''A ListBoxRow that proxies a Gtk.Button: clicking it activates the
-    original button's action and pops down the overflow popover.
-
-    The original button's `set_action_name`/`set_action_target_value` was
-    applied to the action group on the parent window; re-binding those
-    properties on this row would attach a different actionable. Instead we
-    forward the activation via the parent window's action group.'''
-
-    def __init__(self, src_button):
-        Gtk.ListBoxRow.__init__(self)
-        self._src_button = src_button
-        self.set_activatable(True)
-        self.set_selectable(False)
-
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        box.set_margin_start(12)
-        box.set_margin_end(12)
-        box.set_margin_top(6)
-        box.set_margin_bottom(6)
-
-        icon_name = src_button.get_icon_name()
-        if icon_name:
-            icon = Gtk.Image.new_from_icon_name(icon_name)
-            box.append(icon)
-
-        # tooltip_text 形如 "Italic (Ctrl+I)"; 截取括号前作为 label
-        tooltip = src_button.get_tooltip_text() or ''
-        label_text = tooltip.split(' (', 1)[0]
-        label = Gtk.Label(label=label_text)
-        label.set_xalign(0)
-        label.set_hexpand(True)
-        box.append(label)
-
-        self.set_child(box)
-
-    def do_activate(self):
-        Gtk.ListBoxRow.do_activate(self)
-        btn = self._src_button
-        # 关闭 overflow popover
-        popover = btn.get_root()
-        # 找所有 Gtk.Popover 并 popdown（更稳：直接 emit activate）
-        action_name = btn.get_action_name()
-        if action_name:
-            # 形如 "win.show-document-wizard"
-            try:
-                prefix, name = action_name.split('.', 1)
-            except ValueError:
-                prefix, name = None, None
-            if prefix and name:
-                win = btn.get_root()
-                if win is not None and hasattr(win, 'get_action_group'):
-                    ag = win.get_action_group(prefix)
-                    if ag is not None:
-                        action = ag.lookup_action(name)
-                        if action is not None:
-                            action.activate(btn.get_action_target_value())
-                            return
-        # fallback: emit 'clicked' (对非 action 的 button 有效，如 menu button)
-        btn.emit('clicked')

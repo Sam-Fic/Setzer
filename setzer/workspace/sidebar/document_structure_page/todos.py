@@ -47,14 +47,14 @@ class TodosSection(object):
     #@timer
     def update_items(self, *params):
         todos = list()
-        for todo in self.data_provider.document.parser.symbols['todos_with_offset']:
-            document = self.data_provider.document
-            todo.append(document)
-            todos.append(todo)
-        for document in self.data_provider.integrated_includes:
-            for todo in document.parser.symbols['todos_with_offset']:
-                todo.append(document)
-                todos.append(todo)
+        document = self.data_provider.document
+        for todo in document.parser.symbols['todos_with_offset']:
+            # 不修改 parser 的 todo 列表（原 todo.append(document) 反复追加，
+            # 每次更新都让列表增长）。构造新列表 [text, offset, document]。
+            todos.append([todo[0], todo[1], document])
+        for include_document in self.data_provider.integrated_includes:
+            for todo in include_document.parser.symbols['todos_with_offset']:
+                todos.append([todo[0], todo[1], include_document])
         todos.sort(key=lambda todo: todo[0].lower())
         self.todos = todos
 

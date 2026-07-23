@@ -16,13 +16,14 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>
 
 import gi
-from gi.repository import GObject
+from gi.repository import GObject, GLib
 
 import _thread as thread, queue
 import time, re, difflib
 
 from setzer.app.service_locator import ServiceLocator
 from setzer.dialogs.dialog_locator import DialogLocator
+from setzer.app.latex_db import LaTeXDB
 import setzer.document.build_system.builder.builder_build_latex as builder_build_latex
 import setzer.document.build_system.builder.builder_build_bibtex as builder_build_bibtex
 import setzer.document.build_system.builder.builder_build_biber as builder_build_biber
@@ -72,7 +73,16 @@ class BuildSystem(Observable):
 
         self.document.preview.connect('pdf_changed', self.update_can_sync)
 
-        GObject.timeout_add(50, self.results_loop)
+        # 保存 timeout id 以便文档关闭时移除；原实现常驻 50ms 轮询，
+        # 关闭文档后仍持续触发（虽 active_query 为 None 时仅做一次空判）。
+        self._results_loop_timeout_id = GObject.timeout_add(50, self.results_loop)
+
+    def shutdown(self):
+        '''文档关闭时由 workspace.remove_document 调用，移除 50ms 轮询定时器。'''
+        if self._results_loop_timeout_id is not None:
+            GLib.Source.remove(self._results_loop_timeout_id)
+            self._results_loop_timeout_id = None
+        self.active_query = None
 
     def change_build_state(self, state):
         self.build_state = state
@@ -248,6 +258,11 @@ class BuildSystem(Observable):
 
         if result_blob['build'] != None:
             self.invalidate_build_log()
+
+        # 构建完成（可能伴随自动保存）后刷新 LaTeXDB 的 label/bibitem
+        # 数据库（事件驱动，替代原 3 秒轮询）。
+        try: LaTeXDB.parse_included_files()
+        except Exception: pass
 
     def add_query(self, query):
         self.stop_building(notify=False)

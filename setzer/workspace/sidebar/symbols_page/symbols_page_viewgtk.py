@@ -48,7 +48,6 @@ class SymbolsPageView(Gtk.Box):
         self.section_label.set_hexpand(True)
         self.section_label.set_xalign(0.0)
         self.section_label.set_ellipsize(Pango.EllipsizeMode.END)
-        self.section_label.set_margin_start(2)
         self.toolbar.append(self.section_label)
 
         self.nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)

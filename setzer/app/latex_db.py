@@ -17,7 +17,6 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import GObject
 
 import os.path, re, time, bibtexparser
 import xml.etree.ElementTree as ET
@@ -41,7 +40,10 @@ class LaTeXDB():
         LaTeXDB.resources_path = resources_path
         LaTeXDB.generate_static_proposals()
         LaTeXDB.parse_included_files()
-        GObject.timeout_add(3000, LaTeXDB.parse_included_files)
+        # 不再注册 3 秒常驻轮询。改为事件驱动：文档打开/关闭/构建完成时
+        # 由 workspace / build_system 显式调用 LaTeXDB.refresh()。
+        # LaTeXDB 的数据用于 autocomplete 的 \ref/\cite 补全，仅在用户
+        # 打字时查询；文档加载/构建完成时刷新一次即覆盖所有场景。
 
     def get_items(word, top_item=None):
         try: static_items = LaTeXDB.static_proposals[word.lower()]
@@ -144,8 +146,6 @@ class LaTeXDB():
                     elif filename.endswith('.bib'):
                         LaTeXDB.parse_bibtex_file(filename)
                     LaTeXDB.files[filename]['last_parse'] = time.time()
-
-        return True
 
     def parse_latex_file(pathname):
         with open(pathname, 'r') as f:

@@ -17,7 +17,7 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk, Gdk, GObject, Pango, PangoCairo
+from gi.repository import Gtk, Gdk, GObject, GLib, Pango, PangoCairo
 
 import math, time
 
@@ -56,8 +56,19 @@ class Gutter(object):
         self.cursor_x, self.cursor_y = None, None
         self.hovered_folding_region = None
 
+        # 字体度量缓存：char_width / line_height 仅在 FontManager.font_string
+        # 变化（字体/缩放改变）时重算。原实现每次 update_size 都重建
+        # Pango.Layout 并遍历显示行，而 update_size 在每次文本/光标/滚动变化
+        # 时都被调用——是打字期间的主要无谓开销之一。
+        self._last_font_string = FontManager.font_string
+
         self.layout = Pango.Layout(self.source_view.get_pango_context())
         self.layout.set_alignment(Pango.Alignment.RIGHT)
+
+        # idle 去抖 id：5 路信号（文档变化/光标移动/滚动/折叠状态）共用一次
+        # idle 刷新，避免单次按键触发 on_document_change + on_cursor_change
+        # 两路各跑一遍 update_hovered_folding_region + update_size + queue_draw。
+        self._refresh_idle_id = None
 
         self.update_size()
 
@@ -105,29 +116,32 @@ class Gutter(object):
             self.drawing_area.queue_draw()
 
     def on_document_change(self, document):
-        self.update_hovered_folding_region()
-        self.update_size()
-        self.drawing_area.queue_draw()
+        self._schedule_refresh()
 
     def on_cursor_change(self, document):
-        self.update_hovered_folding_region()
-        self.update_size()
-        self.drawing_area.queue_draw()
+        self._schedule_refresh()
 
     def on_adjustment_value_changed(self, adjustment):
-        self.update_hovered_folding_region()
-        self.update_size()
-        self.drawing_area.queue_draw()
+        self._schedule_refresh()
 
     def on_adjustment_changed(self, adjustment):
-        self.update_hovered_folding_region()
-        self.update_size()
-        self.drawing_area.queue_draw()
+        self._schedule_refresh()
 
     def on_folding_state_changed(self, code_folding):
+        self._schedule_refresh()
+
+    def _schedule_refresh(self):
+        '''5 路信号共用一次 idle 刷新。单次按键至少触发 on_document_change +
+        on_cursor_change 两路，去抖后只跑一遍 update + queue_draw。'''
+        if self._refresh_idle_id is None:
+            self._refresh_idle_id = GLib.idle_add(self._refresh_idle)
+
+    def _refresh_idle(self):
+        self._refresh_idle_id = None
         self.update_hovered_folding_region()
         self.update_size()
         self.drawing_area.queue_draw()
+        return False
 
     def on_button_press(self, event_controller, n_press, x, y):
         if self.hovered_folding_region != None:
@@ -197,8 +211,13 @@ class Gutter(object):
             self.hovered_folding_region = self.document.code_folding.get_region_by_line(line)
 
     def update_size(self):
-        self.char_width = FontManager.get_char_width(self.source_view)
-        self.line_height = FontManager.get_line_height(self.source_view)
+        # 仅在字体/缩放变化时重算度量（get_char_width 新建 Pango.Layout，
+        # get_line_height 遍历显示行，均不廉价）。其余情况复用缓存值。
+        font_string = FontManager.font_string
+        if font_string != self._last_font_string:
+            self._last_font_string = font_string
+            self.char_width = FontManager.get_char_width(self.source_view)
+            self.line_height = FontManager.get_line_height(self.source_view)
         total_width = 0
         line_numbers_width = 0
         if self.line_numbers_visible:

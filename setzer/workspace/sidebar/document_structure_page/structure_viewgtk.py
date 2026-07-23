@@ -26,8 +26,22 @@ class StructureSectionView(structure_widget.StructureWidget):
         structure_widget.StructureWidget.__init__(self, model)
 
     def populate(self):
+        # 签名含 (level, icon, title) 的深度优先序列 + id(document)。
+        # 按键在正文时结构不变 → 签名命中 → 跳过 clear_rows + 重建。
+        doc = self.model.data_provider.document
+        acc = []
+        self._collect_signature(self.model.nodes, 0, acc)
+        signature = (id(doc), tuple(acc))
+        if not self.populate_if_changed(signature):
+            return
         self.clear_rows()
         self.add_nodes(self.model.nodes, 0)
+
+    def _collect_signature(self, nodes, level, acc):
+        for node in nodes:
+            item = node['item']
+            acc.append((level, item[2], item[3]))
+            self._collect_signature(node['children'], level + 1, acc)
 
     def add_nodes(self, nodes, level):
         for node in nodes:

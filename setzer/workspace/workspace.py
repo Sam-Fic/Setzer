@@ -39,6 +39,7 @@ import setzer.workspace.context_menu.context_menu as context_menu
 import setzer.workspace.auto_build.auto_build as auto_build
 from setzer.app.service_locator import ServiceLocator
 from setzer.settings.document_settings import DocumentSettings
+from setzer.app.latex_db import LaTeXDB
 
 
 class Workspace(Observable):
@@ -111,15 +112,37 @@ class Workspace(Observable):
         DocumentSettings.load_document_state(document)
         self.add_change_code('new_document', document)
         self.update_recently_opened_document(document.get_filename(), notify=True)
+        # 刷新 LaTeXDB 的 label/bibitem 数据库（事件驱动，替代原 3 秒轮询）。
+        try: LaTeXDB.parse_included_files()
+        except Exception: pass
 
     def remove_document(self, document):
         if document == self.root_document:
             self.unset_root_document()
         DocumentSettings.save_document_state(document)
-        document.controller.continue_save_date_loop = False
+
+        # 释放文档级常驻定时器，避免关闭后仍占主循环配额。
+        # controller（save_date_loop 500ms）所有文档都有；
+        # build_system（results_loop 50ms）与 preview.page_renderer
+        # （rendered_pages_loop 50ms）仅 latex 文档有。
+        try:
+            document.controller.shutdown()
+        except Exception:
+            pass
+
         self.open_documents.remove(document)
         if document.is_latex_document():
             self.open_latex_documents.remove(document)
+            try:
+                document.build_system.shutdown()
+            except Exception:
+                pass
+            # 释放预览渲染器的 50ms 轮询定时器（后台线程靠 is_active=False 空转，
+            # 随进程退出）。避免关闭文档后定时器常驻泄漏。
+            try:
+                document.preview.page_renderer.shutdown()
+            except Exception:
+                pass
         if self.active_document == document:
             candidate = self.get_last_active_document()
             if candidate == None:
@@ -127,6 +150,9 @@ class Workspace(Observable):
             else:
                 self.set_active_document(candidate)
         self.add_change_code('document_removed', document)
+        # 文档列表已变，刷新 LaTeXDB（事件驱动，替代原 3 秒轮询）。
+        try: LaTeXDB.parse_included_files()
+        except Exception: pass
 
     def create_latex_document(self):
         document = Document('latex')

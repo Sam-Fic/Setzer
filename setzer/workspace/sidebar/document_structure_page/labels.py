@@ -47,14 +47,15 @@ class LabelsSection(object):
     #@timer
     def update_items(self, *params):
         labels = list()
-        for label in self.data_provider.document.parser.symbols['labels_with_offset']:
-            document = self.data_provider.document
-            label.append(document)
-            labels.append(label)
-        for document in self.data_provider.integrated_includes:
-            for label in document.parser.symbols['labels_with_offset']:
-                label.append(document)
-                labels.append(label)
+        document = self.data_provider.document
+        for label in document.parser.symbols['labels_with_offset']:
+            # 不修改 parser 的 label 列表（原 label.append(document) 会反复追加，
+            # 每次 update_items 都让列表增长一份 document 引用，属内存/性能泄漏）。
+            # 构造新列表 [name, offset, document]，保持 on_row_activated 的索引不变。
+            labels.append([label[0], label[1], document])
+        for include_document in self.data_provider.integrated_includes:
+            for label in include_document.parser.symbols['labels_with_offset']:
+                labels.append([label[0], label[1], include_document])
         labels.sort(key=lambda label: label[0].lower())
         self.labels = labels
 

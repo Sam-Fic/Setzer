@@ -24,6 +24,11 @@ class TodosSectionView(structure_widget.StructureWidget):
         structure_widget.StructureWidget.__init__(self, model)
 
     def populate(self):
+        # 签名 = id(document) + 全部 todo 文本元组。按键不动 \todo 时签名命中。
+        doc = self.model.data_provider.document
+        signature = (id(doc), tuple(todo[0] for todo in self.model.todos))
+        if not self.populate_if_changed(signature):
+            return
         self.clear_rows()
         for todo in self.model.todos:
             row = self.make_row('starred-symbolic', todo[0], 0)

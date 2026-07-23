@@ -48,6 +48,11 @@ class SearchBar(Gtk.SearchBar):
         find_row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         find_row.set_spacing(6)
 
+        # 左侧占位：与 replace 行的箭头等宽，使两行 entry 左缘对齐。
+        find_spacer = Gtk.Box()
+        find_spacer.set_size_request(16, -1)
+        find_row.append(find_spacer)
+
         self.entry = SearchEntry()
         self.entry.set_hexpand(True)
 
@@ -84,6 +89,7 @@ class SearchBar(Gtk.SearchBar):
         self.replace_wrapper.set_spacing(6)
 
         self.arrow = Gtk.Image(icon_name='go-next-symbolic')
+        self.arrow.set_pixel_size(16)
         self.replace_wrapper.append(self.arrow)
 
         self.replace_entry = Gtk.Entry()

@@ -58,11 +58,7 @@ class HeaderBar(object):
         self.open_document_blank_button.set_action_name('win.open-document-dialog')
         self.open_document_blank_button.add_css_class('headerbar-plain')
 
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        box.append(Gtk.Label(label=_('Open')))
-        box.append(Gtk.Image(icon_name='pan-down-symbolic'))
-        self.open_document_button = Gtk.Button()
-        self.open_document_button.set_child(box)
+        self.open_document_button = Gtk.Button.new_with_label(_('Open'))
         self.open_document_button.set_can_focus(False)
         self.open_document_button.set_tooltip_text(_('Open a document') + ' (' + _('Shift') + '+' + _('Ctrl') + '+O)')
         self.open_document_button.connect('clicked', lambda b: PopoverManager.get_popover('open_document').show())

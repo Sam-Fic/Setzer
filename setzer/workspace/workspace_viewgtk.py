@@ -18,7 +18,7 @@
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Adw, Gtk, GObject, GLib
+from gi.repository import Adw, Gtk, GLib
 
 import os
 
@@ -31,31 +31,6 @@ import setzer.workspace.preview_panel.preview_panel_viewgtk as preview_panel_vie
 import setzer.workspace.help_panel.help_panel_viewgtk as help_panel_view
 import setzer.workspace.sidebar.sidebar_viewgtk as sidebar_view
 import setzer.workspace.welcome_screen.welcome_screen_viewgtk as welcome_screen_view
-
-
-class _WidthReportingPaned(Gtk.Paned):
-    '''Gtk.Paned that emits "width-changed" after each size allocation.
-
-    GTK4 移除了 widget 的 size-allocate 信号（改为 vfunc），无法用 connect
-    监听分配变化。此处覆盖 do_size_allocate 并发射自定义信号，供 shortcutsbar
-    等需要响应编辑器列宽度变化的组件使用。
-
-    注：PyGObject 对 Gtk.Paned.do_size_allocate 的 vfunc 覆写在某些 GTK4 版本
-    不可靠。本类另用 Gtk.EventControllerScroll+Motion 不可行；改在 MainWindow
-    上用 notify::default-width 信号驱动 shortcutsbar.reflow_for_width()。本类的
-    width-changed 信号仍保留向后兼容（presenter 已 connect 它），但 reflow 主路径
-    不依赖此信号。'''
-
-    __gsignals__ = {
-        'width-changed': (GObject.SignalFlags.RUN_FIRST, None, ()),
-    }
-
-    def __init__(self, **kwargs):
-        Gtk.Paned.__init__(self, **kwargs)
-
-    def do_size_allocate(self, width, height, baseline):
-        Gtk.Paned.do_size_allocate(self, width, height, baseline)
-        self.emit('width-changed')
 
 
 class MainWindow(Adw.ApplicationWindow):
@@ -86,8 +61,11 @@ class MainWindow(Adw.ApplicationWindow):
 
         self.build_log = build_log_view.BuildLogView()
 
-        # build_log_paned: 纵向 Gtk.Paned（原生 GTK4，编辑器在上，构建日志在下）
-        self.build_log_paned = _WidthReportingPaned(orientation=Gtk.Orientation.VERTICAL)
+        # build_log_paned: 纵向 Gtk.Paned（编辑器在上，构建日志在下）。
+        # 原为 _WidthReportingPaned 子类（do_size_allocate 中 emit 'width-changed'），
+        # 该信号已无监听者，reflow 由 Shortcutsbar.do_size_allocate 主路径 +
+        # _poll_sb_width 兜底负责，故直接用原生 Gtk.Paned。
+        self.build_log_paned = Gtk.Paned(orientation=Gtk.Orientation.VERTICAL)
         self.build_log_paned.set_start_child(self.document_stack_wrapper)
         self.build_log_paned.set_end_child(self.build_log)
         self.build_log_paned.set_resize_start_child(True)
@@ -173,11 +151,12 @@ class MainWindow(Adw.ApplicationWindow):
                 Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
         # shortcutsbar overflow reflow 安全网：Shortcutsbar.do_size_allocate
-        # 是主触发路径（宽度变化时立即 reflow）。这里每 200ms 轮询一次作为
+        # 是主触发路径（宽度变化时立即 reflow）。这里每 1000ms 轮询一次作为
         # 兜底，覆盖 do_size_allocate 可能漏掉的边缘情况（如某些 GTK4 版本
-        # vfunc 覆写不稳定）。开销可忽略。
+        # vfunc 覆写不稳定）。主路径可靠时此轮询几乎不做实际工作，
+        # 1000ms 足够兜底且把空闲唤醒频率从 5Hz 降到 1Hz。
         # 关键：必须测 shortcutsbar 自身宽度（= build_log_paned 宽度，不含 sidebar
-        # 和 preview），而不是窗口宽度。窗口 1536px 但 sidebar+preview 占大半时，
+        # 和 preview），而不是窗口宽度。窗口 1536px 但 sidebar+preview 占大半时,
         # shortcutsbar 可能只有 500px——若传 1536 给 reflow，会误判有空间导致
         # target=0，按钮被挤出去。
         self._last_sb_width = -1
@@ -201,6 +180,6 @@ class MainWindow(Adw.ApplicationWindow):
                 self._last_sb_width = width
                 self.shortcutsbar.reflow_for_width(width)
             return False
-        GLib.timeout_add(200, _poll_sb_width)
+        GLib.timeout_add(1000, _poll_sb_width)
 
 
