@@ -139,27 +139,45 @@ class SymbolsPage(object):
         else:
             self.view.next_button.set_sensitive(True)
 
-    def get_section_offsets(self):
+        self.update_section_label()
+
+    def get_visible_sections(self):
+        """返回 [(title, viewport_y), ...]，仅含当前可见的 group，按显示顺序。"""
         vadj = self.view.scrolled_window.get_vadjustment()
         scrolling_offset = vadj.get_value()
-        offsets = list()
+        result = list()
         for group in self.view.labels:
             if not group.get_visible():
                 continue
+            title = group.get_title()
             y = group.get_allocation().y - scrolling_offset
-            offsets.append(y)
-        return offsets
+            result.append((title, y))
+        return result
+
+    def get_section_offsets(self):
+        return [y for (title, y) in self.get_visible_sections()]
 
     def get_final_section_offset(self):
-        vadj = self.view.scrolled_window.get_vadjustment()
-        scrolling_offset = vadj.get_value()
-        last = None
-        for group in self.view.labels:
-            if not group.get_visible():
-                continue
-            y = group.get_allocation().y - scrolling_offset
-            last = y
-        return last
+        sections = self.get_visible_sections()
+        if len(sections) == 0:
+            return None
+        return sections[-1][1]
+
+    def get_current_section_title(self):
+        """返回当前滚动到视口顶部的分区标题；视口顶部位于第一段之前时返回首段标题。"""
+        sections = self.get_visible_sections()
+        if len(sections) == 0:
+            return ''
+        current = sections[0][0]
+        for title, y in sections:
+            if y <= 1:
+                current = title
+            else:
+                break
+        return current
+
+    def update_section_label(self):
+        self.view.section_label.set_text(self.get_current_section_title())
 
     def on_next_button_clicked(self, button):
         scrolling_offset = self.view.scrolled_window.get_vadjustment().get_value()

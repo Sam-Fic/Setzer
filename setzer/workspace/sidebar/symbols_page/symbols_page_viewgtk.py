@@ -18,7 +18,7 @@
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gdk, Gtk, Adw
+from gi.repository import Gdk, Gtk, Adw, Pango
 
 import xml.etree.ElementTree as ET
 import os
@@ -33,34 +33,52 @@ class SymbolsPageView(Gtk.Box):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
 
-        self.tabs_box = Gtk.CenterBox()
-        self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.tabs_box.set_valign(Gtk.Align.START)
-        self.tabs_box.set_halign(Gtk.Align.FILL)
+        # 顶部内嵌工具栏：左侧随滚动更新的“当前分区”标题，右侧 linked 的
+        # 上一段 / 下一段导航按钮，再接一个独立的查找切换按钮。外观由
+        # .sidebar-toolbar 与 Document Structure 页统一。
+        self.toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.toolbar.add_css_class('sidebar-toolbar')
+        self.toolbar.set_valign(Gtk.Align.START)
+        self.toolbar.set_halign(Gtk.Align.FILL)
 
-        self.tabs = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.section_label = Gtk.Label(label='')
+        self.section_label.add_css_class('dim-label')
+        self.section_label.add_css_class('sidebar-section-title')
+        self.section_label.set_halign(Gtk.Align.START)
+        self.section_label.set_hexpand(True)
+        self.section_label.set_xalign(0.0)
+        self.section_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.section_label.set_margin_start(2)
+        self.toolbar.append(self.section_label)
+
+        self.nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.nav_box.add_css_class('linked')
 
         self.prev_button = Gtk.Button(icon_name='go-up-symbolic')
         self.prev_button.set_can_focus(False)
         self.prev_button.add_css_class('flat')
-        self.prev_button.set_tooltip_text(_('Back'))
-        self.tabs.append(self.prev_button)
+        self.prev_button.set_tooltip_text(_('Previous section'))
+        self.nav_box.append(self.prev_button)
 
         self.next_button = Gtk.Button(icon_name='go-down-symbolic')
         self.next_button.set_can_focus(False)
         self.next_button.add_css_class('flat')
-        self.next_button.set_tooltip_text(_('Forward'))
-        self.tabs.append(self.next_button)
+        self.next_button.set_tooltip_text(_('Next section'))
+        self.nav_box.append(self.next_button)
+
+        self.toolbar.append(self.nav_box)
 
         self.search_button = Gtk.ToggleButton()
         self.search_button.set_icon_name('edit-find-symbolic')
         self.search_button.set_can_focus(False)
         self.search_button.add_css_class('flat')
         self.search_button.set_tooltip_text(_('Find'))
-        self.tabs.append(self.search_button)
+        self.search_button.set_margin_start(6)
+        self.toolbar.append(self.search_button)
 
         self.search_revealer = Gtk.Revealer()
         self.search_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.search_box.add_css_class('sidebar-search-bar')
 
         self.search_entry = SearchEntry()
         self.search_entry.set_hexpand(True)
@@ -73,8 +91,7 @@ class SymbolsPageView(Gtk.Box):
 
         self.search_revealer.set_child(self.search_box)
 
-        self.tabs_box.set_end_widget(self.tabs)
-        self.append(self.tabs_box)
+        self.append(self.toolbar)
         self.append(self.search_revealer)
 
         # Adw.PreferencesPage 提供原生分组标题与滚动；其内部第一个子控件是
@@ -91,6 +108,8 @@ class SymbolsPageView(Gtk.Box):
         self.symbols_view_recent = Gtk.FlowBox()
         self.symbols_view_recent.set_homogeneous(False)
         self.symbols_view_recent.set_valign(Gtk.Align.START)
+        # 关闭选中态：插入符号后不残留高亮（child-activated 仍会正常触发）。
+        self.symbols_view_recent.set_selection_mode(Gtk.SelectionMode.NONE)
         self.add_category(_('Recent'), self.symbols_view_recent)
 
         self.symbols_lists = list()
@@ -141,7 +160,9 @@ class SidebarSymbolsList(Gtk.FlowBox):
         
         self.set_homogeneous(False)
         self.set_valign(Gtk.Align.START)
-        
+        # 关闭选中态：插入符号后不残留高亮（child-activated 仍会正常触发）。
+        self.set_selection_mode(Gtk.SelectionMode.NONE)
+
         xml_tree = ET.parse(os.path.join(ServiceLocator.get_resources_path(), 'symbols', symbol_folder + '.xml'))
         xml_root = xml_tree.getroot()
         for symbol_tag in xml_root:

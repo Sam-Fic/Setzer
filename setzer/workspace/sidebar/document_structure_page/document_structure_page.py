@@ -18,7 +18,7 @@
 import gi
 gi.require_version('Gtk', '4.0')
 gi.require_version('Adw', '1')
-from gi.repository import Gtk, GObject, Adw
+from gi.repository import Gtk, GObject, Adw, Pango
 
 import time
 
@@ -29,13 +29,14 @@ class DocumentStructurePage(Gtk.Box):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.VERTICAL)
         self.sections = dict()
+        self.section_titles = list()
         self.scroll_to = None
 
         self.add_buttons()
 
         self.page = Adw.PreferencesPage()
         self.page.set_vexpand(True)
-        # 注意：tabs_box 已在 add_buttons() 内部 append 到 self，这里只追加 page
+        # toolbar 已在 add_buttons() 内部 append 到 self，这里只追加 page
         self.append(self.page)
 
         # Adw.PreferencesPage 自身不暴露 get_vadjustment()，但其内部第一个
@@ -52,33 +53,48 @@ class DocumentStructurePage(Gtk.Box):
         group.add(widget)
         self.page.add(group)
         self.sections[name] = group
+        self.section_titles.append(title)
         return group
 
     def set_section_visible(self, name, visible):
         self.sections[name].set_visible(visible)
 
     def add_buttons(self):
-        self.tabs = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        # 顶部内嵌工具栏：左侧为随滚动更新的“当前分区”标题，右侧为
+        # linked 的上一段 / 下一段导航按钮。两页（Document Structure /
+        # Symbols）共享此结构，外观由 .sidebar-toolbar 统一。
+        self.toolbar = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.toolbar.add_css_class('sidebar-toolbar')
+
+        self.section_label = Gtk.Label(label='')
+        self.section_label.add_css_class('dim-label')
+        self.section_label.add_css_class('sidebar-section-title')
+        self.section_label.set_halign(Gtk.Align.START)
+        self.section_label.set_hexpand(True)
+        self.section_label.set_xalign(0.0)
+        self.section_label.set_ellipsize(Pango.EllipsizeMode.END)
+        self.section_label.set_margin_start(2)
+        self.toolbar.append(self.section_label)
+
+        self.nav_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
+        self.nav_box.add_css_class('linked')
 
         self.prev_button = Gtk.Button()
         self.prev_button.set_icon_name('go-up-symbolic')
-        self.prev_button.set_tooltip_text(_('Back'))
+        self.prev_button.set_tooltip_text(_('Previous section'))
         self.prev_button.add_css_class('flat')
         self.prev_button.set_can_focus(False)
-        self.tabs.append(self.prev_button)
+        self.nav_box.append(self.prev_button)
 
         self.next_button = Gtk.Button()
         self.next_button.set_icon_name('go-down-symbolic')
-        self.next_button.set_tooltip_text(_('Forward'))
+        self.next_button.set_tooltip_text(_('Next section'))
         self.next_button.add_css_class('flat')
         self.next_button.set_can_focus(False)
-        self.tabs.append(self.next_button)
+        self.nav_box.append(self.next_button)
 
-        self.tabs_box = Gtk.CenterBox()
-        self.tabs_box.set_orientation(Gtk.Orientation.HORIZONTAL)
-        self.tabs_box.set_start_widget(Gtk.Label(label='Files'))
-        self.tabs_box.set_end_widget(self.tabs)
-        self.append(self.tabs_box)
+        self.toolbar.append(self.nav_box)
+        self.append(self.toolbar)
 
     def on_scroll_or_resize(self, *args):
         scrolling_offset = self.scrolled_window.get_vadjustment().get_value()
@@ -92,16 +108,40 @@ class DocumentStructurePage(Gtk.Box):
         label_condition = len(label_offsets) > 0 and scrolling_offset < label_offsets[-1]
         self.next_button.set_sensitive(height_condition and label_condition)
 
-    def get_section_offsets(self):
+        self.update_section_label()
+
+    def get_visible_sections(self):
+        """返回 [(title, viewport_y), ...]，仅含当前可见的 group，按显示顺序。"""
         vadj = self.scrolled_window.get_vadjustment()
         scrolling_offset = vadj.get_value()
-        offsets = list()
-        for group in self.get_page_groups():
+        result = list()
+        groups = self.get_page_groups()
+        for i, group in enumerate(groups):
             if not group.get_visible():
                 continue
+            title = self.section_titles[i] if i < len(self.section_titles) else group.get_title()
             y = group.get_allocation().y - scrolling_offset
-            offsets.append(y)
-        return offsets
+            result.append((title, y))
+        return result
+
+    def get_section_offsets(self):
+        return [y for (title, y) in self.get_visible_sections()]
+
+    def get_current_section_title(self):
+        """返回当前滚动到视口顶部的分区标题；视口顶部位于第一段之前时返回首段标题。"""
+        sections = self.get_visible_sections()
+        if len(sections) == 0:
+            return ''
+        current = sections[0][0]
+        for title, y in sections:
+            if y <= 1:
+                current = title
+            else:
+                break
+        return current
+
+    def update_section_label(self):
+        self.section_label.set_text(self.get_current_section_title())
 
     def get_page_groups(self):
         groups = list()

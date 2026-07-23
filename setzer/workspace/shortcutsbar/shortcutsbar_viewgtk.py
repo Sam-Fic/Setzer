@@ -32,6 +32,33 @@ from setzer.popovers.shortcutsbar.math_menu import MathMenu
 from setzer.popovers.shortcutsbar.object_menu import ObjectMenu
 
 
+class _NoNaturalWidthLayout(Gtk.BoxLayout):
+    '''Gtk.BoxLayout subclass that reports natural width 0 horizontally.
+
+    必要原因：preview_paned 的分隔条位置按子部件自然宽度自动分配。若
+    shortcutsbar 自然宽度 = left_box 按钮数之和，则 reflow 把按钮移到 overflow
+    时自然宽度变小 → paned 给编辑器列更少空间 → sb_width 变小 → reflow 算出
+    更大 target → 移走更多按钮 → 自然宽度更小 …… 正反馈级联，target 在两个值
+    之间震荡不收敛，按钮被裁切或反复跳动。
+
+    返回 0 后：编辑器列宽度由 document_stack（源码编辑器）的自然宽度驱动，
+    不随按钮数变化；shortcutsbar 通过 hexpand 的 _spacer 填充实际分配宽度，
+    reflow 按该实际宽度收起按钮。feedback loop 断开。
+
+    实现注意：GTK4 中 Gtk.Box 的 measure 由 layout manager 处理，覆写 widget
+    的 do_measure 不生效（PyGObject 3.56.2 + GTK 4.22 验证：Gtk.Box 子类的
+    do_measure 从未被调用）。必须覆写 Gtk.BoxLayout.do_measure 才能改变
+    Gtk.Box 的测量结果。'''
+
+    def do_measure(self, widget, orientation, for_size):
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            # 横向返回 (0, 0)：min=0, nat=0，让 shortcutsbar 不参与父级宽度分配
+            return (0, 0, -1, -1)
+        else:
+            # 纵向用默认测量（按内容决定高度）
+            return Gtk.BoxLayout.do_measure(self, widget, orientation, for_size)
+
+
 class Shortcutsbar(Gtk.Box):
     '''Icon bar above the editor. Uses libadwaita-style overflow menu
     (GNOME Builder/Text Editor pattern) instead of fixed-width wrapping:
@@ -49,6 +76,9 @@ class Shortcutsbar(Gtk.Box):
         Gtk.Box.__init__(self)
         self.set_orientation(Gtk.Orientation.HORIZONTAL)
         self.set_can_focus(False)
+        # 关键：用自定义 layout manager 让横向自然宽度 = 0，断开 reflow 反馈环
+        # （详见 _NoNaturalWidthLayout 文档）。必须在添加子部件之前设置。
+        self.set_layout_manager(_NoNaturalWidthLayout())
         # 容器留白，强化"悬浮一排按钮"的视觉归属（无底板横条）
         self.set_margin_top(6)
         self.set_margin_bottom(6)
@@ -128,26 +158,6 @@ class Shortcutsbar(Gtk.Box):
 
     # ------- continuous reflow: 父级 size 变化时自动计算 overflow -------
 
-    def do_measure(self, orientation, for_size):
-        # 横向：返回极小的自然宽度（0），让 shortcutsbar 的按钮数量不参与
-        # 父级 Gtk.Paned 的位置分配。
-        #
-        # 必要原因：preview_paned 的分隔条位置按子部件自然宽度自动分配。
-        # 若 shortcutsbar 自然宽度 = left_box 按钮数之和，则 reflow 把按钮移到
-        # overflow 时自然宽度变小 → paned 给编辑器列更少空间 → sb_width 变小
-        # → reflow 算出更大 target → 移走更多按钮 → 自然宽度更小 …… 正反馈级联，
-        # target 一路涨到上限，且在两个值之间震荡不收敛，按钮被裁切。
-        #
-        # 返回 0 后：编辑器列宽度由 document_stack（源码编辑器）的自然宽度驱动，
-        # 不随按钮数变化；shortcutsbar 通过 hexpand 的 _spacer 填充实际分配宽度，
-        # reflow 按该实际宽度收起按钮。feedback loop 断开。
-        #
-        # 纵向：用默认测量（按内容决定高度）。
-        if orientation == Gtk.Orientation.HORIZONTAL:
-            return (0, 0, -1, -1)
-        else:
-            return Gtk.Box.do_measure(self, orientation, for_size)
-
     def do_size_allocate(self, width, height, baseline):
         Gtk.Box.do_size_allocate(self, width, height, baseline)
         # 异步 reflow 避免在 size-allocate 流程中改 widget tree
@@ -160,6 +170,20 @@ class Shortcutsbar(Gtk.Box):
         self.reflow_for_width(available_width)
         self._last_allocated_width = available_width
         return False  # remove idle
+
+    def request_reflow(self):
+        '''Re-run reflow with the current allocated width.
+
+        正常 reflow 只在 shortcutsbar 分配宽度变化时触发（do_size_allocate）。
+        但按钮宽度可能因内容变化而改变，且不会引起 shortcutsbar 分配宽度变化
+        （_NoNaturalWidthLayout 横向返回 0，paned 不会因此重分配）。这类情况包括：
+          - wizard 按钮的 revealer 展开/收起（显示/隐藏 "New Document Wizard" 标签）
+          - update_buttons 切换 latex 专属按钮的可见性
+        此时需主动触发一次 reflow，按新的按钮宽度重新计算 overflow 数量。
+        用 idle 延迟，确保 GTK 已处理 set_visible/set_reveal_child 后的新首选宽度。'''
+        width = self.get_allocated_width()
+        if width > 1:
+            GLib.idle_add(self.reflow_for_width, width)
 
     def reflow_for_width(self, available_width):
         '''Compute how many left buttons fit in available_width and hide
@@ -174,24 +198,30 @@ class Shortcutsbar(Gtk.Box):
         宽度始终按"已显示"计算（即一旦 target>0 就一直预留 overflow 按钮空间）。'''
         if available_width <= 1:
             return
+        # 只测量可见按钮：不可见按钮（如非 latex 文档时的 latex 专属按钮）
+        # 不占布局空间，不计入宽度与数量，否则 left_total 虚高导致过度收起。
+        #
+        # 注意：必须用 measure()，不能用 get_preferred_width()——后者在较新
+        # GTK4 已移除（AttributeError），若用 try/except 回退到 36 会让所有按钮
+        # 都被测成 36px，对展开后约 160px 的 wizard 按钮失明，导致该收起时不收起。
+        def _natural_width(widget):
+            try:
+                _min, nat, _b1, _b2 = widget.measure(Gtk.Orientation.HORIZONTAL, -1)
+            except Exception:
+                nat = 36
+            return max(0, nat)
+
         left_widths = []
         for btn in self.left_buttons:
-            try:
-                _, nat = btn.get_preferred_width()
-            except Exception:
-                nat = 36
-            left_widths.append(max(0, nat))
+            if not btn.get_visible():
+                continue
+            left_widths.append(_natural_width(btn))
         right_widths = []
         for btn in [self.button_search, self.button_replace, self.button_more, self.button_build_log]:
-            try:
-                _, nat = btn.get_preferred_width()
-            except Exception:
-                nat = 36
-            right_widths.append(max(0, nat))
-        try:
-            _, overflow_nat = self.overflow_button.get_preferred_width()
-        except Exception:
-            overflow_nat = 36
+            if not btn.get_visible():
+                continue
+            right_widths.append(_natural_width(btn))
+        overflow_nat = _natural_width(self.overflow_button)
 
         spacing = 6
         n_left = len(left_widths)

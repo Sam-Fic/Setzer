@@ -77,6 +77,11 @@ class Actions(object):
         self.add_action('zoom-out', self.zoom_out)
         self.add_action('reset-zoom', self.reset_zoom)
 
+        self.add_action('preview-fit-to-width', self.preview_fit_to_width)
+        self.add_action('preview-fit-to-text-width', self.preview_fit_to_text_width)
+        self.add_action('preview-fit-to-height', self.preview_fit_to_height)
+        self.add_action('preview-set-zoom-level', self.preview_set_zoom_level, GLib.VariantType('d'))
+
         self.add_action('show-preferences-dialog', self.show_preferences_dialog)
         self.add_action('show-shortcuts-dialog', self.show_shortcuts_dialog)
         self.add_action('show-about-dialog', self.show_about_dialog)
@@ -549,6 +554,28 @@ class Actions(object):
         FontManager.propagate_font_setting()
         self.workspace.context_menu.popover_more.view.reset_zoom_button.set_label("{:.0%}".format(FontManager.zoom_level))
         self.workspace.context_menu.reset_zoom_button_pointer.set_label("{:.0%}".format(FontManager.zoom_level))
+
+    def preview_fit_to_width(self, action=None, parameter=None):
+        document = self.workspace.get_root_or_active_latex_document()
+        if document is not None:
+            document.preview.zoom_manager.set_zoom_fit_to_width_auto_offset()
+
+    def preview_fit_to_text_width(self, action=None, parameter=None):
+        document = self.workspace.get_root_or_active_latex_document()
+        if document is not None:
+            document.preview.zoom_manager.set_zoom_fit_to_text_width()
+
+    def preview_fit_to_height(self, action=None, parameter=None):
+        document = self.workspace.get_root_or_active_latex_document()
+        if document is not None:
+            document.preview.zoom_manager.set_zoom_fit_to_height()
+
+    def preview_set_zoom_level(self, action=None, parameter=None):
+        if parameter is None: return
+        level = parameter.unpack()
+        document = self.workspace.get_root_or_active_latex_document()
+        if document is not None:
+            document.preview.zoom_manager.set_zoom_level_auto_offset(level)
 
     def show_preferences_dialog(self, action=None, parameter=''):
         DialogLocator.get_dialog('preferences').run()

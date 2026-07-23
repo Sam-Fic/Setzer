@@ -87,11 +87,14 @@ class Headerbar(object):
         document = self.workspace.get_root_or_active_latex_document()
 
         if document != None:
-            self.view.build_wrapper.set_end_widget(document.build_widget.view)
+            if self.view.build_wrapper.get_first_child() is not None:
+                self.view.build_wrapper.remove(self.view.build_wrapper.get_first_child())
+            self.view.build_wrapper.append(document.build_widget.view)
             if document.build_widget.view.has_result():
                 document.build_widget.view.hide_timer(1600)
         else:
-            self.view.build_wrapper.set_end_widget(None)
+            if self.view.build_wrapper.get_first_child() is not None:
+                self.view.build_wrapper.remove(self.view.build_wrapper.get_first_child())
 
     def activate_welcome_screen_mode(self):
         self.hide_sidebar_toggles()

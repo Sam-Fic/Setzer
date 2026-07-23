@@ -26,14 +26,20 @@ class DocumentChooserView(object):
 
     def __init__(self):
         self.popover = Gtk.Popover()
-        self.popover.set_size_request(414, -1)
+        self.popover.set_size_request(440, -1)
 
         self.box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
         self.popover.set_child(self.box)
 
+        # 搜索框：左右及顶部留白，与 popover 边缘保持 12px 间距。
         self.search_entry = Gtk.SearchEntry()
+        self.search_entry.set_margin_start(12)
+        self.search_entry.set_margin_end(12)
+        self.search_entry.set_margin_top(12)
+        self.search_entry.set_margin_bottom(6)
         self.box.append(self.search_entry)
 
+        # 最近文档列表：boxed-list 自带圆角卡片外观，需与边缘保持 12px 间距。
         self.list_box = Gtk.ListBox()
         self.list_box.set_selection_mode(Gtk.SelectionMode.SINGLE)
         self.list_box.set_activate_on_single_click(True)
@@ -45,16 +51,28 @@ class DocumentChooserView(object):
         self.scrolled_window.set_min_content_height(240)
         self.scrolled_window.set_max_content_height(360)
         self.scrolled_window.set_propagate_natural_height(True)
+        self.scrolled_window.set_margin_start(12)
+        self.scrolled_window.set_margin_end(12)
         self.box.append(self.scrolled_window)
 
+        # 无结果占位：libadwaita 紧凑状态页，仅在搜索无结果时显示。
         self.not_found_slate = Adw.StatusPage()
         self.not_found_slate.add_css_class('compact')
         self.not_found_slate.set_icon_name('system-search-symbolic')
         self.not_found_slate.set_title(_('No results'))
+        self.not_found_slate.set_margin_start(12)
+        self.not_found_slate.set_margin_end(12)
+        self.not_found_slate.set_margin_top(6)
+        self.not_found_slate.set_margin_bottom(6)
         self.box.append(self.not_found_slate)
 
+        # 底部动作按钮：打开文件选择对话框，四周留白。
         self.other_documents_button = Gtk.Button.new_with_label(_('Other Documents') + '...')
         self.other_documents_button.set_can_focus(False)
+        self.other_documents_button.set_margin_start(12)
+        self.other_documents_button.set_margin_end(12)
+        self.other_documents_button.set_margin_top(6)
+        self.other_documents_button.set_margin_bottom(12)
         self.box.append(self.other_documents_button)
 
         self.items = []
@@ -72,6 +90,8 @@ class DocumentChooserView(object):
 
     def create_row(self, folder, filename):
         row = Adw.ActionRow()
+        # 必须显式设为可激活，否则单击不会触发 ListBox::row-activated。
+        row.set_activatable(True)
         row.folder = folder
         row.filename = filename
         row.set_title(filename)

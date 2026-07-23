@@ -17,30 +17,45 @@
 
 import gi
 gi.require_version('Gtk', '4.0')
-from gi.repository import Gtk
+gi.require_version('Adw', '1')
+from gi.repository import Gtk, Gio, GLib
 
-from setzer.popovers.helpers.adw_popover_menu import AdwPopoverMenu
 
-
-class PreviewZoomLevelView(AdwPopoverMenu):
+class PreviewZoomLevelView(Gtk.PopoverMenu):
     '''Preview zoom-level popover (triggered from the preview panel).
 
-    Built on AdwPopoverMenu (Gtk.Popover + Gtk.ListBox + Adw.ActionRow with
-    the ``boxed-list`` style). Each entry is a callback row (``add_callback_item``);
-    the presenter wires the callbacks via ``set_callback`` after construction.
-    Row activation invokes the callback and closes the popover.
+    Built from a ``Gio.Menu`` model on a native ``Gtk.PopoverMenu`` — the same
+    form as the hamburger menu and the context menu. Section breaks are
+    rendered automatically by ``append_section``; actions are real GActions
+    on the main window (``preview-fit-to-width``, ``preview-fit-to-text-width``,
+    ``preview-fit-to-height``, ``preview-set-zoom-level``).
     '''
 
+    LEVELS = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 3.0, 4.0]
+
     def __init__(self, popover_manager):
-        AdwPopoverMenu.__init__(self)
-        self.set_width(180)
+        Gtk.PopoverMenu.__init__(self)
+        self.set_size_request(220, -1)
+        self.set_menu_model(self._build_model())
 
-        self.levels = [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 3.0, 4.0]
+    def _build_model(self):
+        model = Gio.Menu()
 
-        self.button_fit_to_width = self.add_callback_item(_('Fit to Width'))
-        self.button_fit_to_text_width = self.add_callback_item(_('Fit to Text Width'))
-        self.button_fit_to_height = self.add_callback_item(_('Fit to Height'))
-        self.add_separator()
-        self.zoom_level_buttons = dict()
-        for level in self.levels:
-            self.zoom_level_buttons[level] = self.add_callback_item('{0:.0f}%'.format(level * 100))
+        fit_section = Gio.Menu()
+        fit_section.append(_('Fit to Width'), 'win.preview-fit-to-width')
+        fit_section.append(_('Fit to Text Width'), 'win.preview-fit-to-text-width')
+        fit_section.append(_('Fit to Height'), 'win.preview-fit-to-height')
+        model.append_section(None, fit_section)
+
+        zoom_section = Gio.Menu()
+        for level in self.LEVELS:
+            label = '{0:.0f}%'.format(level * 100)
+            item = Gio.MenuItem.new(label, 'win.preview-set-zoom-level')
+            item.set_action_and_target_value(
+                'win.preview-set-zoom-level',
+                GLib.Variant('d', level)
+            )
+            zoom_section.append_item(item)
+        model.append_section(None, zoom_section)
+
+        return model

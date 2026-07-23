@@ -21,7 +21,6 @@ gi.require_version('Adw', '1')
 from gi.repository import Adw, Gtk, GObject, GLib
 
 import os
-import sys
 
 from setzer.app.service_locator import ServiceLocator
 
@@ -173,15 +172,14 @@ class MainWindow(Adw.ApplicationWindow):
                 self.get_display(), self.css_provider_app,
                 Gtk.STYLE_PROVIDER_PRIORITY_USER)
 
-        # shortcutsbar overflow reflow：GTK4 没有暴露 widget size-allocate 信号，
-        # 用 GLib.timeout_add 周期性测量 shortcutsbar 自身实际宽度，宽度变化时
-        # 触发 reflow_for_width()。每 200ms 检查一次，开销可忽略。
+        # shortcutsbar overflow reflow 安全网：Shortcutsbar.do_size_allocate
+        # 是主触发路径（宽度变化时立即 reflow）。这里每 200ms 轮询一次作为
+        # 兜底，覆盖 do_size_allocate 可能漏掉的边缘情况（如某些 GTK4 版本
+        # vfunc 覆写不稳定）。开销可忽略。
         # 关键：必须测 shortcutsbar 自身宽度（= build_log_paned 宽度，不含 sidebar
         # 和 preview），而不是窗口宽度。窗口 1536px 但 sidebar+preview 占大半时，
         # shortcutsbar 可能只有 500px——若传 1536 给 reflow，会误判有空间导致
         # target=0，按钮被挤出去。
-        # 防抖：reflow 改 widget tree 会触发新的 size-allocate，宽度可能震荡；
-        # 用 _reflow_source 防止叠加，且只在宽度稳定后 reflow。
         self._last_sb_width = -1
         self._reflow_source = None
         self._pending_width = None

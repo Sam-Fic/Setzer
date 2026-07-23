@@ -114,8 +114,7 @@ class HeaderBar(object):
         box.add_css_class('linked')
 
         # build button wrapper (contains Save and Build / stop / clean / timer)
-        self.build_wrapper = Gtk.CenterBox()
-        self.build_wrapper.set_orientation(Gtk.Orientation.HORIZONTAL)
+        self.build_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
 
         # Right side, from the title outward: Save icon, preview/help toggles,
         # then the build group (whose leading button is "Save and Build"),

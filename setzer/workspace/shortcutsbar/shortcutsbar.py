@@ -74,10 +74,14 @@ class Shortcutsbar(object):
         self.update_buttons()
 
     def on_paned_width_changed(self, widget):
-        self.width = widget.get_allocated_width()
-        # 同步触发 shortcutsbar 的 overflow reflow——按当前实际宽度
-        # 计算要把几个 left 按钮收进 overflow 三点菜单
-        self.view.reflow_for_width(self.width)
+        # 用 shortcutsbar 自身的分配宽度（而非 build_log_paned 的），保持与
+        # do_size_allocate / request_reflow 一致——后者用的是 shortcutsbar 的
+        # content 宽度（已扣除 margins）。若混用两个宽度（差 12px = 6+6 margins），
+        # reflow 会在 target 2↔3 之间震荡（一个按钮反复进出 overflow）。
+        self.width = self.view.get_allocated_width()
+        # 不直接调 reflow_for_width：do_size_allocate 已经在宽度变化时触发了
+        # reflow。这里只需更新 wizard 按钮可见性（依赖 self.width），
+        # update_wizard_button 末尾会调 request_reflow 处理内容驱动的 reflow。
         self.update_wizard_button(animate=False)
 
     def on_document_changed(self, workspace=None, parameter=None):
@@ -105,6 +109,9 @@ class Shortcutsbar(object):
         else:
             self.view.wizard_button.set_visible(False)
 
+        # wizard 按钮宽度可能因 revealer 展开/收起而改变，需重新计算 overflow
+        self.view.request_reflow()
+
     def update_buttons(self, workspace=None, parameter=None):
         if self.document == None: return
 
@@ -125,6 +132,9 @@ class Shortcutsbar(object):
         root_or_active_latex = self.workspace.get_root_or_active_latex_document()
         self.view.button_build_log.set_active(self.workspace.get_show_build_log())
         self.view.button_build_log.set_visible(root_or_active_latex)
+
+        # latex 专属按钮可见性变化会改变 left_box 总宽度，需重新计算 overflow
+        self.view.request_reflow()
 
     def on_build_log_button_clicked(self, toggle_button, parameter=None):
         self.workspace.set_show_build_log(toggle_button.get_active())
