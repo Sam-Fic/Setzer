@@ -5,10 +5,10 @@
  * 仅在原生组件无法达到目标行为时，追加作用域精确的最小 CSS。
  */
 
-/* 标题栏图标按钮：微悬停 / 按下时不显示底板色（透明）。
-   仅作用于带 .headerbar-icon 的按钮。 */
-headerbar button.headerbar-plain.headerbar-icon:hover:not(:checked),
-headerbar button.headerbar-plain.headerbar-icon:active:not(:checked) {
+/* 标题栏图标按钮：统一无按钮底板，仅保留选中状态。 */
+headerbar button.headerbar-icon:not(:checked),
+headerbar button.headerbar-icon:hover:not(:checked),
+headerbar button.headerbar-icon:active:not(:checked) {
     background-color: transparent;
     background-image: none;
 }
@@ -100,16 +100,15 @@ textview gutter {
  * 空状态占位：现代、低调，避免空分区显得空洞。
  */
 .sidebar-empty-state {
-    padding: 4px 8px 8px;
+    padding: 4px 8px 12px;
     opacity: 0.85;
     margin-top: 0;
-    /* Keep the compact status page fully visible without taking so much
-       vertical space that the sidebar page starts scrolling just for the
-       empty state. */
-    min-height: 110px;
+    /* Ensure the status page is tall enough for its icon/title/description
+       and does not start scrolling its own internal ScrolledWindow. */
+    min-height: 140px;
 }
 .sidebar-empty-state image {
-    -gtk-icon-size: 32px;
+    -gtk-icon-size: 48px;
 }
 .sidebar-empty-state .title {
     font-size: 0.95em;

@@ -39,16 +39,19 @@ class HeaderBar(object):
         self.document_structure_toggle.set_child(Gtk.Image(icon_name='view-list-symbolic'))
         self.document_structure_toggle.set_can_focus(False)
         self.document_structure_toggle.set_tooltip_text(_('Toggle document structure') + ' (F2)')
+        self.document_structure_toggle.add_css_class('headerbar-plain')
+        self.document_structure_toggle.add_css_class('headerbar-icon')
 
         self.symbols_toggle = Gtk.ToggleButton()
         self.symbols_toggle.set_child(Gtk.Image(icon_name='emoji-symbols-symbolic'))
         self.symbols_toggle.set_can_focus(False)
         self.symbols_toggle.set_tooltip_text(_('Toggle symbols') + ' (F3)')
+        self.symbols_toggle.add_css_class('headerbar-plain')
+        self.symbols_toggle.add_css_class('headerbar-icon')
 
         self.sidebar_toggles_box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
         self.sidebar_toggles_box.append(self.document_structure_toggle)
         self.sidebar_toggles_box.append(self.symbols_toggle)
-        self.sidebar_toggles_box.add_css_class('linked')
 
         self.widget.pack_start(self.sidebar_toggles_box)
 
@@ -95,7 +98,8 @@ class HeaderBar(object):
         self.save_document_button.set_can_focus(False)
         self.save_document_button.set_tooltip_text(_('Save the current document') + ' (' + _('Ctrl') + '+S)')
         self.save_document_button.set_action_name('win.save')
-        self.save_document_button.add_css_class('raised')
+        self.save_document_button.add_css_class('headerbar-plain')
+        self.save_document_button.add_css_class('headerbar-icon')
 
         # help and preview toggles
         box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)
@@ -103,13 +107,16 @@ class HeaderBar(object):
         self.preview_toggle.set_child(Gtk.Image(icon_name='view-paged-symbolic'))
         self.preview_toggle.set_can_focus(False)
         self.preview_toggle.set_tooltip_text(_('Toggle preview') + ' (F9)')
+        self.preview_toggle.add_css_class('headerbar-plain')
+        self.preview_toggle.add_css_class('headerbar-icon')
         box.append(self.preview_toggle)
         self.help_toggle = Gtk.ToggleButton()
         self.help_toggle.set_child(Gtk.Image(icon_name='help-browser-symbolic'))
         self.help_toggle.set_can_focus(False)
         self.help_toggle.set_tooltip_text(_('Toggle help') + ' (F1)')
+        self.help_toggle.add_css_class('headerbar-plain')
+        self.help_toggle.add_css_class('headerbar-icon')
         box.append(self.help_toggle)
-        box.add_css_class('linked')
 
         # build button wrapper (contains Save and Build / stop / clean / timer)
         self.build_wrapper = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL)

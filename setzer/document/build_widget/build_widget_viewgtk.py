@@ -52,6 +52,8 @@ class BuildWidgetView(Gtk.Box):
         self.clean_button = Gtk.Button()
         self.clean_button.set_child(Gtk.Image(icon_name='edit-clear-all-symbolic'))
         self.clean_button.set_tooltip_text(_('Cleanup build files'))
+        self.clean_button.add_css_class('headerbar-plain')
+        self.clean_button.add_css_class('headerbar-icon')
 
         self.result_revealer = Gtk.Revealer()
         self.result_revealer.set_transition_type(Gtk.RevealerTransitionType.CROSSFADE)

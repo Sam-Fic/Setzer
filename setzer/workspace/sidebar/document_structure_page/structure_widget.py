@@ -52,6 +52,12 @@ class StructureWidget(Gtk.Box):
         self.empty_state.set_vexpand(True)
         self.empty_state.add_css_class('compact')
         self.empty_state.add_css_class('sidebar-empty-state')
+        # Adw.StatusPage wraps its content in a Gtk.ScrolledWindow with
+        # propagate-natural-height disabled, so it will happily start scrolling
+        # when given a small height. Make it request its content height instead.
+        scrolled = self._find_child_of_type(self.empty_state, Gtk.ScrolledWindow)
+        if scrolled is not None:
+            scrolled.set_propagate_natural_height(True)
         Gtk.Box.append(self, self.empty_state)
 
         # 签名短路：populate() 调用 populate_if_changed(signature)，若签名与
@@ -126,3 +132,14 @@ class StructureWidget(Gtk.Box):
         row.add_prefix(prefix_box)
         row.set_title(text)
         return row
+
+    def _find_child_of_type(self, widget, type_):
+        if isinstance(widget, type_):
+            return widget
+        child = widget.get_first_child()
+        while child is not None:
+            found = self._find_child_of_type(child, type_)
+            if found is not None:
+                return found
+            child = child.get_next_sibling()
+        return None
