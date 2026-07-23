@@ -55,26 +55,31 @@ class HeaderBar(object):
 
         self.widget.pack_start(self.sidebar_toggles_box)
 
-        # open document buttons
-        self.open_document_blank_button = Gtk.Button.new_with_label(_('Open') + '...')
+        # open document buttons (icon-only). 两个按钮互斥：
+        # - open_document_blank_button: 无最近文档时显示，触发文件选择对话框
+        # - open_document_button: 有最近文档时显示，展开最近文档气泡
+        # 视觉上共用同一图标，对用户而言是同一个"打开"按钮。
+        self.open_document_blank_button = Gtk.Button(icon_name='document-open-symbolic')
+        self.open_document_blank_button.set_can_focus(False)
         self.open_document_blank_button.set_tooltip_text(_('Open a document') + ' (' + _('Ctrl') + '+O)')
         self.open_document_blank_button.set_action_name('win.open-document-dialog')
         self.open_document_blank_button.add_css_class('headerbar-plain')
+        self.open_document_blank_button.add_css_class('headerbar-icon')
 
-        self.open_document_button = Gtk.Button.new_with_label(_('Open'))
+        self.open_document_button = Gtk.Button(icon_name='document-open-symbolic')
         self.open_document_button.set_can_focus(False)
         self.open_document_button.set_tooltip_text(_('Open a document') + ' (' + _('Shift') + '+' + _('Ctrl') + '+O)')
         self.open_document_button.connect('clicked', lambda b: PopoverManager.get_popover('open_document').show())
         self.open_document_button.add_css_class('headerbar-plain')
+        self.open_document_button.add_css_class('headerbar-icon')
 
-        # new document
-        self.new_document_button = Gtk.MenuButton()
-        box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-        box.append(Gtk.Image(icon_name='document-new-symbolic'))
-        box.append(Gtk.Image(icon_name='pan-down-symbolic'))
-        self.new_document_button.set_child(box)
+        # new document: Adw.SplitButton — 左半部分默认新建 LaTeX 文档，
+        # 右侧箭头展开气泡选择文档类型（LaTeX / BibTeX）。
+        self.new_document_button = Adw.SplitButton()
+        self.new_document_button.set_child(Gtk.Image(icon_name='document-new-symbolic'))
         self.new_document_button.set_can_focus(False)
         self.new_document_button.set_tooltip_text(_('Create a new document'))
+        self.new_document_button.set_action_name('win.new-latex-document')
         self.new_document_button.set_menu_model(PopoverManager.get_popover('new_document').view.model)
         self.new_document_button.add_css_class('headerbar-plain')
         self.new_document_button.add_css_class('headerbar-icon')

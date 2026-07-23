@@ -104,8 +104,9 @@ textview gutter {
     opacity: 0.85;
     margin-top: 0;
     /* Ensure the status page is tall enough for its icon/title/description
-       and does not start scrolling its own internal ScrolledWindow. */
-    min-height: 140px;
+       and does not start scrolling its own internal ScrolledWindow.
+       Leave a little extra vertical breathing room above the bare minimum. */
+    min-height: 220px;
 }
 .sidebar-empty-state image {
     -gtk-icon-size: 48px;
