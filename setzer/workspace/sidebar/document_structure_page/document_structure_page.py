@@ -52,6 +52,7 @@ class DocumentStructurePage(Gtk.Box):
     def add_section(self, name, title, widget):
         group = Adw.PreferencesGroup()
         group.set_title(title)
+        group.add_css_class('sidebar-section-group')
         group.add(widget)
         self.page.add(group)
         self.sections[name] = group

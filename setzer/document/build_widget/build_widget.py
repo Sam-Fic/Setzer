@@ -35,7 +35,7 @@ class BuildWidget(Observable):
         self.items = list()
 
         self.view = build_widget_view.BuildWidgetView()
-        self.view.stop_button.connect('clicked', self.on_stop_build_button_click)
+        self.view.build_button.connect('clicked', self.on_build_button_click)
         self.view.clean_button.connect('clicked', self.on_clean_button_click)
 
         self.build_button_state = ('idle', int(time.time()*1000))
@@ -47,11 +47,11 @@ class BuildWidget(Observable):
         self.document.build_system.connect('build_state', self.on_build_state)
         self.settings.connect('settings_changed', self.on_settings_changed)
 
-        self.view.build_timer.connect('notify::child-revealed', self.on_revealer_finished)
+        self.view.result_revealer.connect('notify::child-revealed', self.on_revealer_finished)
 
     def on_revealer_finished(self, revealer, params):
         if not revealer.get_child_revealed():
-            self.view.build_timer.set_visible(False)
+            self.view.result_revealer.set_visible(False)
 
     def on_filename_change(self, document, filename=None):
         self.set_clean_button_state()
@@ -69,23 +69,18 @@ class BuildWidget(Observable):
             if selfstate[0] != build_button_state[0]:
                 self.build_button_state = build_button_state
                 if build_button_state[0] == 'idle':
-                    self.view.stop_button.set_visible(False)
+                    self.view.switch_to_idle()
                     self.view.build_button.set_sensitive(True)
-                    self.view.build_button.set_visible(True)
                 else:
-                    self.view.stop_button.set_visible(True)
-                    self.view.build_button.set_sensitive(False)
-                    self.view.build_button.set_visible(False)
+                    self.view.switch_to_building()
+                    self.view.build_button.set_sensitive(True)
                     self.view.reset_timer()
-                    self.view.label.set_text('0:00')
-                    self.view.show_timer()
                     self.view.start_timer()
         else:
-            self.view.stop_button.set_visible(False)
+            self.view.switch_to_idle()
             self.view.build_button.set_sensitive(True)
-            self.view.build_button.set_visible(True)
             self.build_button_state = ('idle', int(time.time()*1000))
-            self.view.hide_timer_now()
+            self.view.hide_result_now()
         self.set_clean_button_state()
 
     def on_build_state(self, build_system, message):
@@ -111,15 +106,17 @@ class BuildWidget(Observable):
 
     def show_message(self, message=''):
         self.view.stop_timer()
+        self.view.switch_to_idle()
         self.view.show_result(message)
         if self.view.get_parent() != None:
-            self.view.hide_timer(1600)
+            self.view.hide_result(1600)
 
-    def on_stop_build_button_click(self, button_object=None):
-        document = self.document
-        if document != None:
-            if document.filename != None:
-                self.document.build_system.stop_building()
+    def on_build_button_click(self, button_object=None):
+        if self.build_button_state[0] == 'building':
+            document = self.document
+            if document != None:
+                if document.filename != None:
+                    self.document.build_system.stop_building()
 
     def set_clean_button_state(self):
         def get_clean_button_state(document):
@@ -153,8 +150,10 @@ class BuildWidget(Observable):
 
     def update_build_button(self):
         building_in_progress = not (self.document.build_system.get_build_state() in ['', 'idle'])
-        self.view.stop_button.set_visible(building_in_progress)
-        self.view.build_button.set_sensitive(not building_in_progress)
-        self.view.build_button.set_visible(not building_in_progress)
+        if building_in_progress:
+            self.view.switch_to_building()
+        else:
+            self.view.switch_to_idle()
+        self.view.build_button.set_sensitive(True)
 
 

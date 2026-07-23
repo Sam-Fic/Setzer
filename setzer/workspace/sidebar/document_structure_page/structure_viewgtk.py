@@ -24,6 +24,11 @@ class StructureSectionView(structure_widget.StructureWidget):
 
     def __init__(self, model):
         structure_widget.StructureWidget.__init__(self, model)
+        self.set_empty_state(
+            'document-properties-symbolic',
+            _('No document structure'),
+            _('Add \\section{}, \\chapter{}, or other sectioning commands to outline your document.')
+        )
 
     def populate(self):
         # 签名含 (level, icon, title) 的深度优先序列 + id(document)。
@@ -36,6 +41,7 @@ class StructureSectionView(structure_widget.StructureWidget):
             return
         self.clear_rows()
         self.add_nodes(self.model.nodes, 0)
+        self.set_empty_state_visible(len(self.model.nodes) == 0)
 
     def _collect_signature(self, nodes, level, acc):
         for node in nodes:
@@ -53,5 +59,5 @@ class StructureSectionView(structure_widget.StructureWidget):
                 text = item[3]
             row = self.make_row(icon_name, text, level * 18)
             row.item_data = node
-            self.append(row)
+            self.append_row(row)
             self.add_nodes(node['children'], level + 1)

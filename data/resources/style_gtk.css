@@ -67,10 +67,65 @@ textview gutter {
  * 仅作用于带 .compact-rows 的 ListBox，不影响其他列表。
  */
 .compact-rows row {
-    padding-top: 2px;
-    padding-bottom: 2px;
+    padding-top: 1px;
+    padding-bottom: 1px;
+    min-height: 28px;
 }
 .compact-rows row > .header {
-    margin-top: 1px;
-    margin-bottom: 1px;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+.compact-rows row image {
+    -gtk-icon-size: 16px;
+}
+
+/*
+ * 侧边栏分区组标题：降低视觉重量，更现代、紧凑。
+ */
+.sidebar-section-group > .header > .title {
+    font-weight: 500;
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+.sidebar-section-group > .header {
+    margin-bottom: 2px;
+}
+
+/*
+ * 列表容器圆角：让 ActionRow 列表在分组内呈现卡片式圆角。
+ * GTK CSS 不支持 overflow，因此对首行/末行单独设置圆角。
+ */
+.sidebar-section-group list {
+    border-radius: 12px;
+}
+.sidebar-section-group list row:first-child {
+    border-top-left-radius: 12px;
+    border-top-right-radius: 12px;
+}
+.sidebar-section-group list row:last-child {
+    border-bottom-left-radius: 12px;
+    border-bottom-right-radius: 12px;
+}
+
+/*
+ * 空状态占位：现代、低调，避免空分区显得空洞。
+ */
+.sidebar-empty-state {
+    padding: 16px 8px;
+    opacity: 0.85;
+}
+.sidebar-empty-state .title {
+    font-size: 0.95em;
+    font-weight: 600;
+}
+.sidebar-empty-state .description {
+    font-size: 0.85em;
+}
+
+/*
+ * 文件行副标题：显示相对目录，更 subtle。
+ */
+.sidebar-file-row .subtitle {
+    font-size: 0.8em;
+    opacity: 0.6;
 }

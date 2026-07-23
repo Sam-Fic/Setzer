@@ -106,8 +106,6 @@ class StructureSection(object):
             for i in range(level + 1, 8):
                 predecessor[i] = node
 
-        self.view.set_visible(len(nodes_in_line) != 0)
-
         self.nodes_in_line = nodes_in_line
         self.nodes = nodes
         self.view.populate()

@@ -59,6 +59,4 @@ class LabelsSection(object):
         labels.sort(key=lambda label: label[0].lower())
         self.labels = labels
 
-        self.view.set_visible(len(labels) != 0)
-
         self.view.populate()

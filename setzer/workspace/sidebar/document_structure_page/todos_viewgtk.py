@@ -22,6 +22,11 @@ class TodosSectionView(structure_widget.StructureWidget):
 
     def __init__(self, model):
         structure_widget.StructureWidget.__init__(self, model)
+        self.set_empty_state(
+            'starred-symbolic',
+            _('No to-dos'),
+            _('Add \\todo{...} to keep track of tasks.')
+        )
 
     def populate(self):
         # 签名 = id(document) + 全部 todo 文本元组。按键不动 \todo 时签名命中。
@@ -33,4 +38,5 @@ class TodosSectionView(structure_widget.StructureWidget):
         for todo in self.model.todos:
             row = self.make_row('starred-symbolic', todo[0], 0)
             row.item_data = todo
-            self.append(row)
+            self.append_row(row)
+        self.set_empty_state_visible(len(self.model.todos) == 0)

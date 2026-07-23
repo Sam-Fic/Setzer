@@ -287,19 +287,18 @@ class Gutter(object):
 
         if is_current and self.highlight_current_line and not self.source_buffer.get_has_selection():
             Gdk.cairo_set_source_rgba(ctx, ColorManager.get_ui_color('line_highlighting_color'))
-            yrange = self.source_view.get_line_yrange(self.source_buffer.get_iter_at_line(line).iter)
-            ctx.rectangle(0, yrange.y - self.adjustment.get_value(), self.total_width, yrange.height)
+            ctx.rectangle(0, offset, self.total_width, line_height)
             ctx.fill()
-            ctx.rectangle(self.total_width + 1, yrange.y - self.adjustment.get_value(), self.char_width, yrange.height)
+            ctx.rectangle(self.total_width + 1, offset, self.char_width, line_height)
             ctx.fill()
             Gdk.cairo_set_source_rgba(ctx, ColorManager.get_ui_color('view_fg_color'))
 
         self.layout.set_markup(text)
 
-        # 用实际行高做垂直居中，不依赖 self.line_height 缓存（可能因 realized
-        # 时序/wrapping/字体变化未及时更新而与实际行高不一致）。
+        # 行号在第一条 visual line 内垂直居中。wrap 行时 line_height 是整个
+        # 逻辑行高度，用 self.line_height（单行高度）居中才对齐到第一行。
         text_height = self.layout.get_extents().logical_rect.height / Pango.SCALE
-        offset += (line_height - text_height) / 2
+        offset += (self.line_height - text_height) / 2
         ctx.move_to(0, offset)
 
         PangoCairo.show_layout(ctx, self.layout)

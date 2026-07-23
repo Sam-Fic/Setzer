@@ -22,6 +22,11 @@ class LabelsSectionView(structure_widget.StructureWidget):
 
     def __init__(self, model):
         structure_widget.StructureWidget.__init__(self, model)
+        self.set_empty_state(
+            'tag-symbolic',
+            _('No labels'),
+            _('Add \\label{...} to create references to figures, sections, and more.')
+        )
 
     def populate(self):
         # 签名 = id(document) + 全部 label 名称元组。按键不动 \label 时签名命中。
@@ -33,4 +38,5 @@ class LabelsSectionView(structure_widget.StructureWidget):
         for label in self.model.labels:
             row = self.make_row('tag-symbolic', label[0], 0)
             row.item_data = label
-            self.append(row)
+            self.append_row(row)
+        self.set_empty_state_visible(len(self.model.labels) == 0)

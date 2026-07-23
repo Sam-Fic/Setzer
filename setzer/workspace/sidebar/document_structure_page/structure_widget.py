@@ -20,7 +20,7 @@ gi.require_version('Gtk', '4.0')
 from gi.repository import Gtk, Adw
 
 
-class StructureWidget(Gtk.ListBox):
+class StructureWidget(Gtk.Box):
     '''Base class for the sidebar structure lists (structure/files/labels/todos).
 
     Formerly a Gtk.DrawingArea with a custom snapshot()/draw_nodes() that
@@ -32,15 +32,24 @@ class StructureWidget(Gtk.ListBox):
     '''
 
     def __init__(self, model):
-        Gtk.ListBox.__init__(self)
+        Gtk.Box.__init__(self)
+        self.set_orientation(Gtk.Orientation.VERTICAL)
 
         self.model = model
 
-        self.set_selection_mode(Gtk.SelectionMode.NONE)
-        self.set_activate_on_single_click(True)
-        self.set_can_focus(False)
-        self.add_css_class('compact-rows')   # 收紧行距，配合 style_gtk.css
-        self.connect('row-activated', self.on_row_activated)
+        self.list_box = Gtk.ListBox()
+        self.list_box.set_selection_mode(Gtk.SelectionMode.NONE)
+        self.list_box.set_activate_on_single_click(True)
+        self.list_box.set_can_focus(False)
+        self.list_box.add_css_class('compact-rows')
+        self.list_box.connect('row-activated', self.on_row_activated)
+        Gtk.Box.append(self, self.list_box)
+
+        self.empty_state = Adw.StatusPage()
+        self.empty_state.set_visible(False)
+        self.empty_state.add_css_class('compact')
+        self.empty_state.add_css_class('sidebar-empty-state')
+        Gtk.Box.append(self, self.empty_state)
 
         # 签名短路：populate() 调用 populate_if_changed(signature)，若签名与
         # 上次相同则跳过 clear_rows + 重建。按键在正文（不涉及 \section /
@@ -51,6 +60,17 @@ class StructureWidget(Gtk.ListBox):
 
     def on_row_activated(self, listbox, row):
         self.model.on_row_activated(row)
+
+    def set_empty_state(self, icon_name, title, description=None):
+        self.empty_state.set_icon_name(icon_name)
+        self.empty_state.set_title(title)
+        if description is not None:
+            self.empty_state.set_description(description)
+
+    def set_empty_state_visible(self, visible):
+        self.set_visible(True)
+        self.list_box.set_visible(not visible)
+        self.empty_state.set_visible(visible)
 
     def populate_if_changed(self, signature):
         '''若 signature 与上次 populate 时相同，返回 False（调用方应跳过重建）；
@@ -66,11 +86,14 @@ class StructureWidget(Gtk.ListBox):
 
     def clear_rows(self):
         self._last_signature = None
-        child = self.get_first_child()
+        child = self.list_box.get_first_child()
         while child is not None:
             sibling = child.get_next_sibling()
-            self.remove(child)
+            self.list_box.remove(child)
             child = sibling
+
+    def append_row(self, row):
+        self.list_box.append(row)
 
     def make_row(self, icon_name, text, indent):
         row = Adw.ActionRow()

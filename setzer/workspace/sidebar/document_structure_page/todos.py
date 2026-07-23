@@ -58,6 +58,4 @@ class TodosSection(object):
         todos.sort(key=lambda todo: todo[0].lower())
         self.todos = todos
 
-        self.view.set_visible(len(todos) != 0)
-
         self.view.populate()
