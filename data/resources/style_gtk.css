@@ -5,11 +5,10 @@
  * 仅在原生组件无法达到目标行为时，追加作用域精确的最小 CSS。
  */
 
-/* 标题栏独立按钮：微悬停 / 按下时不显示底板色（透明）。
-   两个贴在一起的 linked 组（侧边栏开关、预览/帮助开关）不加此 class，
-   保留 Libadwaita 原生的 hover 反馈。:checked 态（toggle 选中）也保留。 */
-headerbar button.headerbar-plain:hover:not(:checked),
-headerbar button.headerbar-plain:active:not(:checked) {
+/* 标题栏图标按钮：微悬停 / 按下时不显示底板色（透明）。
+   仅作用于带 .headerbar-icon 的图标按钮；文本按钮（Open 等）保留原生 hover。 */
+headerbar button.headerbar-plain.headerbar-icon:hover:not(:checked),
+headerbar button.headerbar-plain.headerbar-icon:active:not(:checked) {
     background-color: transparent;
     background-image: none;
 }

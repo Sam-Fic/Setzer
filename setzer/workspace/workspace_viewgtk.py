@@ -50,7 +50,10 @@ class MainWindow(Adw.ApplicationWindow):
         self.shortcutsbar = shortcutsbar_view.Shortcutsbar()
 
         self.document_stack = Gtk.Stack()
-        self.document_stack.set_transition_type(Gtk.StackTransitionType.CROSSFADE)
+        # 用 NONE 而非 CROSSFADE：CROSSFADE 有约 200ms 淡入淡出动画，期间
+        # 旧页面与新页面同时绘制，切换文档（尤其是「新建 latex」）时左侧编辑器
+        # 会延迟出现，给人「更新不及时/卡顿」的感觉。NONE 立即切换，无视觉延迟。
+        self.document_stack.set_transition_type(Gtk.StackTransitionType.NONE)
         # 不设 set_size_request(550)——shortcutsbar 的 overflow reflow 会让
         # 按钮在窄宽时自动收起，不再需要硬性最小宽度。这样窗口可以拖到更小。
         self.document_stack.set_vexpand(True)

@@ -33,6 +33,11 @@ class Actions(object):
         self.settings = ServiceLocator.get_settings()
 
         self.actions = dict()
+        # idle 去抖 id：update_actions 被多路信号频繁触发（modified_changed、
+        # can_sync_changed、notify::can-undo、notify::has-selection、
+        # adjustment changed 等），单次按键可能连续触发若干次。去抖后合并为
+        # 一次实际刷新，避免重复 set_enabled 调用。
+        self._update_actions_idle_id = None
         self.add_action('new-latex-document', self.new_latex_document)
         self.add_action('new-bibtex-document', self.new_bibtex_document)
         self.add_action('open-document-dialog', self.open_document_dialog)
@@ -144,6 +149,17 @@ class Actions(object):
         self.update_actions()
 
     def update_actions(self):
+        # 去抖入口：仅调度一次 idle，实际刷新在 _update_actions_now 中进行。
+        # 多路信号在一个事件循环周期内连续触发时，只跑一次实际刷新。
+        if self._update_actions_idle_id is None:
+            self._update_actions_idle_id = GLib.idle_add(self._update_actions_idle)
+
+    def _update_actions_idle(self):
+        self._update_actions_idle_id = None
+        self._update_actions_now()
+        return False
+
+    def _update_actions_now(self):
         document = self.workspace.get_active_document()
         document_active = document != None
         document_active_is_latex = document_active and document.is_latex_document()

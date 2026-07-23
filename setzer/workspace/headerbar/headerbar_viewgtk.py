@@ -74,6 +74,7 @@ class HeaderBar(object):
         self.new_document_button.set_tooltip_text(_('Create a new document'))
         self.new_document_button.set_menu_model(PopoverManager.get_popover('new_document').view.model)
         self.new_document_button.add_css_class('headerbar-plain')
+        self.new_document_button.add_css_class('headerbar-icon')
         popover = self.new_document_button.get_popover()
         if popover is not None:
             popover.add_css_class('menu')
@@ -87,6 +88,7 @@ class HeaderBar(object):
         self.menu_button = self.hamburger.get_menu_button()
         self.menu_button.set_can_focus(False)
         self.menu_button.add_css_class('headerbar-plain')
+        self.menu_button.add_css_class('headerbar-icon')
 
         # save document button (icon only)
         self.save_document_button = Gtk.Button(icon_name='document-save-symbolic')
