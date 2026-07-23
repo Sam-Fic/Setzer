@@ -73,9 +73,13 @@ class Autocomplete(object):
             self.update_suggestions()
 
     def on_adjustment_change(self, adjustment):
+        # 未激活时 widget 已隐藏，滚动无需更新位置/大小/内容。
+        # 原实现无条件 queue_draw，每次滚动都重算字体度量并清空重建 row。
+        if not self.is_active: return
         self.widget.queue_draw()
 
     def on_adjustment_value_change(self, adjustment):
+        if not self.is_active: return
         self.widget.queue_draw()
 
     def activate_if_possible(self):

@@ -30,6 +30,7 @@ class DocumentWizardView(DialogView):
         DialogView.__init__(self, main_window)
 
         self.set_content_width(750)
+        self.set_content_height(600)
         self.headerbar.set_title_widget(Gtk.Label(label=_('Create a template document')))
         self.headerbar.set_show_start_title_buttons(False)
         self.headerbar.set_show_end_title_buttons(False)
@@ -37,6 +38,11 @@ class DocumentWizardView(DialogView):
 
         self.center_box = Gtk.CenterBox()
         self.center_box.set_orientation(Gtk.Orientation.HORIZONTAL)
+        # Fill the topbox vertically so the page_stack (and therefore the
+        # ScrolledWindow inside each page) gets the dialog's full content
+        # height to scroll within, instead of only the natural height of
+        # the visible page.
+        self.center_box.set_vexpand(True)
         self.pages = list()
 
         self.title_label = Gtk.Label(label=_('Create a template document'))
@@ -77,6 +83,10 @@ class DocumentWizardView(DialogView):
         # to the tallest page (which left a large blank area on short pages like
         # the document-class chooser).
         self.page_stack.set_vhomogeneous(False)
+        # Fill the dialog's content area so a long page (e.g. the Packages
+        # list on General settings) can scroll inside its ScrolledWindow
+        # instead of overflowing past the dialog.
+        self.page_stack.set_vexpand(True)
         self.center_box.set_center_widget(self.page_stack)
         self.topbox.append(self.center_box)
 

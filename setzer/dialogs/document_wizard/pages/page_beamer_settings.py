@@ -116,7 +116,6 @@ class BeamerSettingsPageView(PageView):
     def __init__(self):
         PageView.__init__(self)
 
-        self.header.set_text(_('Beamer settings'))
         self.headerbar_subtitle = _('Step') + ' 2: ' + _('Beamer settings')
 
         self.theme_names = ['Warsaw', 'Malmoe', 'Luebeck', 'Copenhagen', 'Szeged', 'Singapore', 'Frankfurt', 'Darmstadt', 'Dresden', 'Ilmenau', 'Berlin', 'Hannover', 'Marburg', 'Goettingen', 'PaloAlto', 'Berkeley', 'Montpellier', 'JuanLesPins', 'Antibes', 'Rochester', 'Pittsburgh', 'EastLansing', 'CambridgeUS', 'AnnArbor', 'Madrid', 'Boadilla', 'Bergen', 'default']
@@ -186,8 +185,7 @@ class BeamerSettingsPageView(PageView):
         self.preview.set_margin_end(18)
 
         self.content = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=24)
-        self.content.append(self.form)
+        self.content.append(self.wrap_content(self.form, maximum_size=420, tightening_threshold=360))
         self.content.append(self.preview)
 
-        self.append(self.header)
         self.append(self.content)

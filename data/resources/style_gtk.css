@@ -47,6 +47,20 @@ textview gutter {
 }
 
 /*
+ * 符号网格：每个符号都是内部 Gtk.Button 外再包一层 Gtk.FlowBoxChild。
+ * Libadwaita 默认会给 FlowBoxChild 自身绘制悬停/激活/选中背景，与内部按钮
+ * 的 flat hover 叠加后会出现“两层矩形阴影”。这里只去掉 FlowBoxChild 在
+ * hover/active/selected 时的装饰背景，保留焦点轮廓供键盘导航使用。
+ */
+.symbols-flowbox flowboxchild:hover,
+.symbols-flowbox flowboxchild:active,
+.symbols-flowbox flowboxchild:selected {
+    background: transparent;
+    background-color: transparent;
+    box-shadow: none;
+}
+
+/*
  * 收紧 Adw.ActionRow 行距：构建日志面板与文档结构侧边栏共用。
  * libadwaita 默认 list row 垂直 padding 较大（~8px）+ ActionRow 内部 .header
  * box 上下 margin（~6px），行距偏松。.compact-rows 作用域内收紧到更紧凑密度。

@@ -123,8 +123,9 @@ class Workspace(Observable):
 
         # 释放文档级常驻定时器，避免关闭后仍占主循环配额。
         # controller（save_date_loop 500ms）所有文档都有；
-        # build_system（results_loop 50ms）与 preview.page_renderer
-        # （rendered_pages_loop 50ms）仅 latex 文档有。
+        # preview.page_renderer（rendered_pages_loop 50ms）仅 latex 文档有。
+        # build_system 已改为事件驱动（worker 完成通过 GLib.idle_add 回调），
+        # shutdown 仅清理 active_query 引用，无定时器需移除。
         try:
             document.controller.shutdown()
         except Exception:

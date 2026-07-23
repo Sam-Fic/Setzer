@@ -105,6 +105,7 @@ class SymbolsPageView(Gtk.Box):
         self.placeholders = list()    # 与 labels 对应的 group（搜索过滤时统一显隐）
 
         self.symbols_view_recent = Gtk.FlowBox()
+        self.symbols_view_recent.add_css_class('symbols-flowbox')
         self.symbols_view_recent.set_homogeneous(False)
         self.symbols_view_recent.set_valign(Gtk.Align.START)
         # 关闭选中态：插入符号后不残留高亮（child-activated 仍会正常触发）。
@@ -147,6 +148,7 @@ class SidebarSymbolsList(Gtk.FlowBox):
 
     def __init__(self, symbol_folder, symbol_width):
         Gtk.FlowBox.__init__(self)
+        self.add_css_class('symbols-flowbox')
 
         self.symbol_folder = symbol_folder
         self.symbol_width = symbol_width

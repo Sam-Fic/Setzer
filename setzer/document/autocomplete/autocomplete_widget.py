@@ -35,7 +35,11 @@ class AutocompleteWidget(object):
 
         self.view = autocomplete_view.AutocompleteWidgetView(self)
 
-        self.line_height = None
+        self.line_height = FontManager.get_line_height(self.source_view)
+        self.char_width = FontManager.get_char_width(self.source_view)
+        # 字体度量缓存：line_height / char_width 仅在 FontManager.font_string
+        # 变化（字体/缩放改变）时重算，与 gutter.py 的缓存范式一致。
+        self._last_font_string = FontManager.font_string
         self.height = None
         self.shortcutsbar_height = None
         self.x_position, self.y_position = (None, None)
@@ -65,8 +69,11 @@ class AutocompleteWidget(object):
         self.view.populate()
 
     def update_size(self):
-        self.line_height = FontManager.get_line_height(self.source_view)
-        self.char_width = FontManager.get_char_width(self.source_view)
+        font_string = FontManager.font_string
+        if font_string != self._last_font_string:
+            self._last_font_string = font_string
+            self.line_height = FontManager.get_line_height(self.source_view)
+            self.char_width = FontManager.get_char_width(self.source_view)
         self.shortcutsbar_height = self.main_window.shortcutsbar.get_allocated_height()
 
         if self.model.items != None:

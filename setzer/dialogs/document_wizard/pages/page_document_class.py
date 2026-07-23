@@ -59,7 +59,6 @@ class DocumentClassPageView(PageView):
     def __init__(self):
         PageView.__init__(self)
 
-        self.header.set_text(_('Choose a document class'))
         self.headerbar_subtitle = _('Step') + ' 1: ' + _('Choose a document class')
 
         self.list = Gtk.ListBox()
@@ -105,5 +104,4 @@ class DocumentClassPageView(PageView):
         self.content.append(self.list)
         self.content.append(self.preview_container)
 
-        self.append(self.header)
         self.append(self.content)

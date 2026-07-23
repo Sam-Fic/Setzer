@@ -66,8 +66,9 @@ class BuildLogDialogPresenter(object):
             has_content = self.view.lists[item_type].get_first_child() is not None
             group.set_visible(item_type in visible_types and has_content)
 
-        # 全空时显示 empty_label
-        self.view.empty_label.set_visible(not any_visible)
+        # 全空时显示空状态页，有内容时隐藏
+        self.view.empty_state.set_visible(not any_visible)
+        self.view.page.set_visible(any_visible)
 
         # 滚动回顶：Adw.PreferencesPage 的第一个子是 ScrolledWindow（Pass-8 已验证）。
         scrolled = self.view.page.get_first_child()

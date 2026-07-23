@@ -91,7 +91,6 @@ class LetterSettingsPageView(PageView):
         PageView.__init__(self)
         self.set_document_settings_page()
 
-        self.header.set_text(_('Letter settings'))
         self.headerbar_subtitle = _('Step') + ' 2: ' + _('Letter settings')
 
         self.group_page_format = Adw.PreferencesGroup()
@@ -116,5 +115,4 @@ class LetterSettingsPageView(PageView):
         self.content.append(self.group_font_size)
         self.content.append(self.group_margins)
 
-        self.append(self.header)
-        self.append(self.content)
+        self.append(self.wrap_content(self.content))

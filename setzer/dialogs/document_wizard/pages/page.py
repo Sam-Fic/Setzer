@@ -44,11 +44,37 @@ class PageView(Gtk.Box):
         self.set_margin_bottom(18)
         self.set_spacing(18)
 
-        self.header = Gtk.Label(label='')
-        self.header.set_xalign(0)
-        self.header.add_css_class('title')
+        # Fill the dialog's content area so a ScrolledWindow child can
+        # actually scroll instead of just growing past the dialog.
+        self.set_vexpand(True)
 
         self.headerbar_subtitle = ''
+
+    def wrap_content(self, content, maximum_size=500, tightening_threshold=400):
+        '''Wrap a child widget in an Adw.Clamp inside a Gtk.ScrolledWindow.
+
+        The clamp keeps rows at a comfortable form width instead of
+        stretching to fill very wide windows (below
+        ``tightening_threshold`` the clamp starts shrinking so narrow
+        windows are not over-padded). The ScrolledWindow lets the page
+        scroll vertically when its content (e.g. the long Packages list
+        on the General settings page) is taller than the dialog.
+        '''
+        clamp = Adw.Clamp()
+        clamp.set_maximum_size(maximum_size)
+        clamp.set_tightening_threshold(tightening_threshold)
+        clamp.set_child(content)
+
+        scrolled = Gtk.ScrolledWindow()
+        # GTK4: scrollbar policies live on Gtk.PolicyType (the GTK3
+        # Gtk.ScrollbarPolicy enum was removed), and they are GObject
+        # properties, not setter methods.
+        scrolled.hscrollbar_policy = Gtk.PolicyType.NEVER
+        scrolled.vscrollbar_policy = Gtk.PolicyType.AUTOMATIC
+        scrolled.set_vexpand(True)
+        scrolled.set_propagate_natural_height(False)
+        scrolled.set_child(clamp)
+        return scrolled
 
     def set_document_settings_page(self):
         '''Create the shared document-settings rows (page format, options,

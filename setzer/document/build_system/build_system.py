@@ -73,15 +73,10 @@ class BuildSystem(Observable):
 
         self.document.preview.connect('pdf_changed', self.update_can_sync)
 
-        # 保存 timeout id 以便文档关闭时移除；原实现常驻 50ms 轮询，
-        # 关闭文档后仍持续触发（虽 active_query 为 None 时仅做一次空判）。
-        self._results_loop_timeout_id = GObject.timeout_add(50, self.results_loop)
-
     def shutdown(self):
-        '''文档关闭时由 workspace.remove_document 调用，移除 50ms 轮询定时器。'''
-        if self._results_loop_timeout_id is not None:
-            GLib.Source.remove(self._results_loop_timeout_id)
-            self._results_loop_timeout_id = None
+        '''文档关闭时由 workspace.remove_document 调用。
+        不再有定时器需移除；置 active_query=None 使任何在途的
+        worker 完成回调（_on_query_done）走 `is not query` 守卫被丢弃。'''
         self.active_query = None
 
     def change_build_state(self, state):
@@ -184,16 +179,24 @@ class BuildSystem(Observable):
     def get_badbox_count(self):
         return self.build_log_data['badbox_count']
 
-    def results_loop(self):
-        if self.active_query != None:
-            if self.active_query.is_done():
-                build_result = self.active_query.get_build_result()
-                forward_sync_result = self.active_query.get_forward_sync_result()
-                backward_sync_result = self.active_query.get_backward_sync_result()
-                if forward_sync_result != None or backward_sync_result != None or build_result != None:
-                    self.parse_result({'build': build_result, 'forward_sync': forward_sync_result, 'backward_sync': backward_sync_result})
-                self.active_query = None
-        return True
+    def _on_query_done(self, query):
+        # 由 worker 线程经 GLib.idle_add 调度到主线程，替代原 50ms 轮询 results_loop。
+        # 仅当 query 仍是当前 active_query 时处理结果，否则丢弃——覆盖：
+        #   - stop_building 已置 active_query=None（用户中止构建）
+        #   - add_query 已替换为新 query（中止旧构建并立刻起新构建）
+        #   - shutdown 已置 active_query=None（文档关闭）
+        # 三种情形下旧 query 的结果都不应再处理，与原 results_loop 的
+        # `if self.active_query != None` 守卫语义一致。
+        if self.active_query is not query:
+            return False
+
+        build_result = query.get_build_result()
+        forward_sync_result = query.get_forward_sync_result()
+        backward_sync_result = query.get_backward_sync_result()
+        if forward_sync_result != None or backward_sync_result != None or build_result != None:
+            self.parse_result({'build': build_result, 'forward_sync': forward_sync_result, 'backward_sync': backward_sync_result})
+        self.active_query = None
+        return False   # 一次性 idle，不重复
 
     def parse_result(self, result_blob):
         if result_blob['build'] != None or result_blob['forward_sync'] != None:
@@ -275,7 +278,10 @@ class BuildSystem(Observable):
         while len(query.jobs) > 0:
             if not query.force_building_to_stop:
                 self.builders[query.jobs.pop(0)].run(query)
-        query.mark_done()
+        # worker 线程结束：把结果处理调度到主线程，替代原「设 done 标志 +
+        # 主线程 50ms 轮询 is_done()」的 poll-for-completion 模式。
+        # GLib.idle_add 线程安全，回调在主线程执行（代码库已有 10+ 处同范式）。
+        GLib.idle_add(self._on_query_done, query)
 
     def start_building(self):
         if self.build_mode == 'forward_sync' and not self.has_synctex_file: return

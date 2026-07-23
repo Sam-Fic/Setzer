@@ -96,12 +96,13 @@ class BuildLogDialogView(DialogView):
             self.lists[item_type] = lst
 
         # 空状态占位：全部 group 都为空时显示。
-        self.empty_label = Gtk.Label(label=_('No build log items to show.'))
-        self.empty_label.add_css_class('dim-label')
-        self.empty_label.set_margin_top(24)
-        self.empty_label.set_margin_bottom(24)
-        self.empty_label.set_visible(False)
-        self.topbox.append(self.empty_label)
+        self.empty_state = Adw.StatusPage()
+        self.empty_state.set_icon_name('dialog-error-symbolic')
+        self.empty_state.set_title(_('Build Log'))
+        self.empty_state.set_description(_('No build log items to show.'))
+        self.empty_state.set_vexpand(True)
+        self.empty_state.set_visible(False)
+        self.topbox.append(self.empty_state)
 
     def clear_all(self):
         '''清空所有 group 的行（用于 presenter 重建前）。'''
@@ -145,6 +146,7 @@ class BuildLogList(Gtk.ListBox):
 
         filename/line_number/description 作为 Python 动态属性附加在 row 上，
         供 controller 的 on_row_activated 与 on_right_click 直接读取。
+        行尾放置复制按钮，点击可复制该单条内容（含行号）。
         '''
         row = Adw.ActionRow()
         row.set_selectable(False)
@@ -161,6 +163,15 @@ class BuildLogList(Gtk.ListBox):
         row.description = description
         row.item_type = item_type
 
+        # 行尾复制按钮：点击复制当前单行。
+        copy_button = Gtk.Button(icon_name='edit-copy-symbolic')
+        copy_button.set_tooltip_text(_('Copy'))
+        copy_button.add_css_class('flat')
+        copy_button.set_valign(Gtk.Align.CENTER)
+        copy_button.set_can_focus(False)
+        copy_button.connect('clicked', self.on_copy_row_clicked, row)
+        row.add_suffix(copy_button)
+
         # 右键 Copy 单行：GestureClick 监听 SECONDARY button。
         # pressed 回调直接 copy 单行文本，不弹 popover（少一步点击）。
         gesture = Gtk.GestureClick()
@@ -168,6 +179,11 @@ class BuildLogList(Gtk.ListBox):
         gesture.connect('pressed', self.on_right_click, row)
         row.add_controller(gesture)
         return row
+
+    def on_copy_row_clicked(self, button, row):
+        '''点击行尾复制按钮：复制该单条文本（含行号）。'''
+        text = self._format_row_text(row)
+        Gdk.Display.get_default().get_clipboard().set(text)
 
     def on_right_click(self, gesture, n_press, x, y, row):
         '''右键直接 copy 单行，格式与 Copy All 一致：file:line: description。'''

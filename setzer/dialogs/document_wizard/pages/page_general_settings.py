@@ -107,7 +107,6 @@ class GeneralSettingsPageView(PageView):
     def __init__(self):
         PageView.__init__(self)
 
-        self.header.set_text(_('General document settings'))
         self.headerbar_subtitle = _('Step') + ' 3: ' + _('General document settings')
 
         # Package descriptions (instance-level so gettext _() is resolved at
@@ -175,8 +174,7 @@ class GeneralSettingsPageView(PageView):
         self.content.append(self.group_language)
         self.content.append(self.group_packages)
 
-        self.append(self.header)
-        self.append(self.content)
+        self.append(self.wrap_content(self.content))
 
     def _create_package_row(self, label, name):
         row = Adw.SwitchRow()
