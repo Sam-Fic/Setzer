@@ -155,6 +155,11 @@ class Shortcutsbar(Gtk.Box):
         self._last_allocated_width = -1
         # 按钮自然宽度缓存。避免在 reflow 热路径中调用 measure()。
         self._button_widths = None
+        # Gio.Menu 重建延迟到 idle：overflow 菜单只在用户点击三点按钮时显示，
+        # 不需要在 do_size_allocate 中同步重建（会触发 PopoverMenu items-changed
+        # 信号处理，造成 threshold 切换时的卡顿）。
+        self._menu_refresh_pending = False
+        self._pending_overflow_buttons = []
         self.connect('realize', self._on_realize)
 
     def _on_realize(self, widget):
@@ -255,7 +260,11 @@ class Shortcutsbar(Gtk.Box):
         right_total = sum(right_widths) + spacing * max(0, n_right - 1)
         fixed = right_total + 2 * self._margin_horizontal + overflow_nat + spacing
 
-        avail = available_width - fixed
+        # 安全余量：让"下一级收起"判定更积极，避免 measure() 未计入的
+        # 边框/内边距/子像素取整导致按钮被轻微裁切。8-12px 足够覆盖 GTK4
+        # 默认按钮的 box-shadow/border 未完全包含在 natural width 中的情况。
+        safety_margin = 30
+        avail = available_width - fixed - safety_margin
 
         if left_total <= avail:
             target = 0
@@ -290,7 +299,7 @@ class Shortcutsbar(Gtk.Box):
         - remove/append 是 structural change，在 allocate 中会破坏 GTK4 布局周期
         - 配合在 Gtk.Box.do_size_allocate 之前调用，layout manager 按新可见性同帧分配
 
-        用 _base_visible 属性区分两种隐藏来源：
+        用 base-visible data 区分两种隐藏来源：
         - update_buttons 设 base-visible=False（非 latex 文档隐藏 latex 专属按钮）
         - reflow 设 reflow_visible=False（宽度不够 overflow 到菜单）
         实际可见 = base_visible and reflow_visible'''
@@ -307,15 +316,23 @@ class Shortcutsbar(Gtk.Box):
             reflow_visible = i not in overflow_indices
             btn.set_visible(base and reflow_visible)
 
-        self._refresh_overflow_list(overflow_count)
+        # Gio.Menu 重建延迟到 idle：overflow 菜单只在用户点击时显示，不需要
+        # 在 do_size_allocate 中同步重建。连续拖拽时 target 可能快速变化
+        # （0→1→2→3），_menu_refresh_pending 确保只重建一次（用最终状态）。
+        overflow_buttons = [self.left_buttons[i] for i in sorted(overflow_indices)]
+        self._pending_overflow_buttons = overflow_buttons
+        if not self._menu_refresh_pending:
+            self._menu_refresh_pending = True
+            GLib.idle_add(self._deferred_refresh_overflow_list)
+
         self._overflow_count = n
         self.overflow_button.set_visible(n > 0)
 
-    def _refresh_overflow_list(self, n):
+    def _deferred_refresh_overflow_list(self):
+        self._menu_refresh_pending = False
+        buttons = self._pending_overflow_buttons
         self._overflow_model.remove_all()
-        if n == 0:
-            return
-        for btn in self.left_buttons[-n:]:
+        for btn in buttons:
             meta = self._button_meta.get(id(btn))
             if meta is None:
                 continue
@@ -333,6 +350,7 @@ class Shortcutsbar(Gtk.Box):
                 if icon_name:
                     item.set_icon(Gio.ThemedIcon.new(icon_name))
                 self._overflow_model.append_item(item)
+        return False
 
     # ------- left button construction helpers -------
 
@@ -480,5 +498,3 @@ class Shortcutsbar(Gtk.Box):
             'tooltip': button.get_tooltip_text() or '',
             'menu_model': menu_builder.model,
         }
-
-
